@@ -31,10 +31,9 @@ def get_espn_scoreboard(sport, league, target_date):
         seen_ids.add(ev['id'])
         
         status_obj = ev['status']['type']
-        state = status_obj['state']
+        state = status_obj['state'] # post, in, pre
         status_text = "已結束" if state == 'post' else ("進行中" if state == 'in' else "預計")
         
-        # 若是進行中，顯示詳細進度（如 Top 9th）
         if state == 'in' and 'detail' in status_obj:
             status_text = status_obj['detail']
 
@@ -42,14 +41,14 @@ def get_espn_scoreboard(sport, league, target_date):
         away = comp['competitors'][0]['team']['displayName']
         home = comp['competitors'][1]['team']['displayName']
         
-        # 建立 Match HTML
-        vs_html = f"{away} <span style='color:red; font-weight:bold;'>vs</span> {home}"
+        # 建立 Match HTML (vs 紅字)
+        match_html = f"{away} <span style='color:red; font-weight:bold;'>vs</span> {home}"
         
         parsed_data.append({
             "Time": local_dt.strftime('%H:%M'),
             "Status": status_text,
-            "State": state,
-            "Match": vs_html,
+            "State": state, # 這是邏輯欄位，不會顯示在前端表格中
+            "Match": match_html,
             "Score": f"{comp['competitors'][0].get('score', '0')} - {comp['competitors'][1].get('score', '0')}" if state != 'pre' else "-"
         })
     return parsed_data
