@@ -68,15 +68,6 @@ def setup_cyber_css():
                 box-shadow: 0px 0px 0px #111;
                 transform: translate(3px, 3px);
             }
-
-            /* 5. 比賽列 hover 效果（純 CSS，避開 Streamlit JS 沙盒限制）*/
-            tr.match-row:hover {
-                background-color: #eef4ff !important;
-                cursor: pointer;
-            }
-            tr.match-row:hover .match-cell {
-                color: #1a73e8 !important;
-            }
         </style>
     """, unsafe_allow_html=True)
 
@@ -118,19 +109,22 @@ def get_table_html(title, data_list):
 
         if match_url:
             a_style = 'color:inherit;text-decoration:none;display:block'
-            arrow   = '<span style="font-size:0.75em;color:#bbb;margin-left:4px">↗</span>'
+            a_over  = "this.style.color='#1a73e8'"
+            a_out   = "this.style.color='inherit'"
             match_html = (
                 f'<a href="{match_url}" target="_blank" rel="noopener" '
-                f'style="{a_style}">'
-                f'{match_text} {arrow}</a>'
+                f'style="{a_style}" '
+                f'onmouseover="{a_over}" '
+                f'onmouseout="{a_out}">'
+                f'{match_text}</a>'
             )
         else:
             match_html = match_text
 
-        html += "<tr class='match-row' style='border-bottom: 1px solid #eee;'>"
+        html += "<tr style='border-bottom: 1px solid #eee;'>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em;'>{row['Time']}</td>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em; {status_style}'>{status_box}</td>"
-        html += f"<td class='match-cell' style='padding: 10px 12px; font-size: 0.95em;'>{match_html}</td>"
+        html += f"<td style='padding: 10px 12px; font-size: 0.95em;'>{match_html}</td>"
         html += f"<td style='padding: 10px 12px; font-weight: bold; font-size: 1.05em;'>{row['Score']}</td></tr>"
     
     html += "</tbody></table></div></div>"
