@@ -4,10 +4,15 @@ from datetime import datetime
 import pytz
 from api365_utils import get_365_scoreboard
 
-st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
+# --- 系統配置 (強制預設展開側邊欄) ---
+st.set_page_config(
+    page_title="Gemini 體育戰情系統 2.0", 
+    layout="wide",
+    initial_sidebar_state="expanded" 
+)
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄 ---
+# --- 側邊欄：極簡化控制 ---
 with st.sidebar:
     st.markdown("## 🏆 戰情監控中心")
     selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
@@ -48,11 +53,11 @@ def render_html_table(data_list):
     html += "</tbody></table>"
     st.markdown(html, unsafe_allow_html=True)
 
-# 介面優化
-st.markdown("<style>.block-container { padding-top: 1rem !important; } header { visibility: hidden; }</style>", unsafe_allow_html=True)
+# --- 介面優化 (已解除 header 隱藏，側邊欄按鈕不再消失) ---
+st.markdown("<style>.block-container { padding-top: 1rem !important; }</style>", unsafe_allow_html=True)
 
 current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
-st.caption(f"⏱️ 365Scores 直連 | 監控中 | 最後更新：{current_time}")
+st.caption(f"⏱️ 365Scores 直連 | 系統背景自動更新 (每 10 秒) | 最後更新：{current_time}")
 
 # --- 三欄位佈局 ---
 col_nba, col_mlb, col_npb = st.columns(3)
@@ -69,6 +74,6 @@ with col_npb:
     st.markdown("### ⚾ NPB (日職)")
     render_html_table(get_365_scoreboard('npb', selected_date))
 
-# --- 戰情心跳 ---
+# --- 戰情心跳：背景自動定時抓取 ---
 time.sleep(10)
 st.rerun()
