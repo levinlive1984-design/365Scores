@@ -17,11 +17,56 @@ def setup_cyber_css():
                 box-shadow: 0 0 5px rgba(0,255,0,0.3);
             }
             
-            /* 🏆 幽靈過渡術：讓刷新時的殘影變得極度輕微 */
-            /* 將透明度降至 0.1 (近乎透明)，並將動畫時間縮短至 0.2 秒，達到「微閃即逝」的效果 */
+            /* 幽靈過渡術：微閃即逝的殘影 */
             [data-stale="true"] {
                 opacity: 0.1 !important;
                 transition: opacity 0.2s ease-in-out !important;
+            }
+            
+            /* 🔴 緊急重置開關：實體工業風 (Kill Switch) */
+            /* 1. 消除 Streamlit 預設按鈕外觀，設定文字樣式 */
+            [data-testid="stSidebar"] .stButton > button {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                color: #d32f2f !important; /* 警告紅文字 */
+                font-weight: 900 !important;
+                font-size: 1.15em !important;
+                letter-spacing: 2px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                padding: 5px 0 !important;
+                transition: all 0.2s ease !important;
+            }
+
+            /* 2. 滑鼠懸浮時文字微動，增加操作手感 */
+            [data-testid="stSidebar"] .stButton > button:hover {
+                color: #ff0000 !important;
+                transform: translateX(4px);
+            }
+
+            /* 3. 繪製獨立的「黑框白底紅圈」硬體按鈕圖示 */
+            [data-testid="stSidebar"] .stButton > button::before {
+                content: '🔴';
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                border: 2px solid #111;       /* 粗黑外框 */
+                border-radius: 6px;           /* 微圓角 */
+                background-color: #f8f9fa;    /* 淺灰白底色 */
+                margin-right: 12px;           /* 與文字的距離 */
+                font-size: 12px;
+                box-shadow: 3px 3px 0px #111; /* 賽博風無機質硬陰影 */
+                transition: all 0.1s ease;
+            }
+
+            /* 4. 按下時的物理回饋 (按鈕被壓下去的感覺) */
+            [data-testid="stSidebar"] .stButton > button:active::before {
+                box-shadow: 0px 0px 0px #111;
+                transform: translate(3px, 3px);
             }
         </style>
     """, unsafe_allow_html=True)
