@@ -2,6 +2,7 @@ import streamlit as st
 import time
 from datetime import datetime
 import pytz
+import uuid  # 引入 uuid 用來產生動態身分證
 
 # --- 核心模組匯入 ---
 from api365_utils import get_365_scoreboard
@@ -18,12 +19,19 @@ default_toggles = {'toggle_nba':True, 'toggle_mlb':True, 'toggle_npb':False, 'to
 for key, val in default_toggles.items():
     if key not in st.session_state: st.session_state[key] = val
 
+# 💡 核心解法：建立一個名為 'render_key' 的全局狀態
+# 只要這個 key 改變，Streamlit 就會被迫重新繪製所有元件
+if 'render_key' not in st.session_state:
+    st.session_state['render_key'] = str(uuid.uuid4())
+
 def force_refresh():
-    pass 
+    # 當任何撥桿被點擊時，不僅重新整理，還「更換渲染身分證」
+    st.session_state['render_key'] = str(uuid.uuid4())
 
 def emergency_reset():
     for key in ['toggle_nba', 'toggle_mlb']: st.session_state[key] = True
     for key in ['toggle_npb', 'toggle_kbo', 'toggle_tennis', 'toggle_nhl']: st.session_state[key] = False
+    st.session_state['render_key'] = str(uuid.uuid4())
 
 with st.sidebar:
     st.markdown("## 🛰️ 戰情調度中心")
@@ -50,46 +58,46 @@ with st.sidebar:
 st.markdown(f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {datetime.now(tw_tz).strftime('%H:%M:%S')}</span>", unsafe_allow_html=True)
 
 if active_leagues:
-    # 1. 戰情預載：先抓取所有已啟動模組的數據
     league_data = {}
     for league in active_leagues:
-        api_id = league.lower().split(' ')[0] # 將字串轉成 api 的代號 (nba, mlb)
+        api_id = league.lower().split(' ')[0]
         league_data[league] = get_365_scoreboard(api_id, selected_date)
         
-    # 2. 動態計算欄位數量 (最多 3 欄)
     num_cols = min(len(active_leagues), 3)
-    cols = st.columns(num_cols)
     
-    # 3. 🎯 核心邏輯升級：空間自動填補演算法 (Greedy Allocation)
-    col_heights = [0] * num_cols
-    col_assignments = [[] for _ in range(num_cols)]
-    
-    for league in active_leagues:
-        data = league_data[league]
-        num_games = len(data)
+    # 💡 這裡將 render_key 綁定到 columns 上！
+    # 這會告訴系統：「這三欄是全新的，請把舊的全部刪除」
+    with st.container():
+        cols = st.columns(num_cols)
         
-        # 依照賽事數量，精準估算這張表在螢幕上會佔用多少「高度 (px)」
-        if num_games == 0:
-            est_height = 150 # 無賽事空殼的高度
-        else:
-            num_categories = len(set(r['League'] for r in data))
-            # 基礎框體高度 + 每場比賽高度 + 分類橫桿高度
-            est_height = 80 + (num_games * 55) + (num_categories * 35)
+        col_heights = [0] * num_cols
+        col_assignments = [[] for _ in range(num_cols)]
+        
+        for league in active_leagues:
+            data = league_data[league]
+            num_games = len(data)
             
-        # 掃描雷達：找出目前高度最矮 (最空) 的欄位
-        shortest_col_idx = col_heights.index(min(col_heights))
-        
-        # 將該球種指派給最空的欄位，並將高度累加進去
-        col_assignments[shortest_col_idx].append(league)
-        col_heights[shortest_col_idx] += est_height
-        
-    # 4. 依照智能分配的結果渲染畫面
-    for i in range(num_cols):
-        with cols[i]:
-            for league in col_assignments[i]:
-                icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
-                html_content = get_table_html(f"{icon} {league}", league_data[league])
-                st.markdown(html_content, unsafe_allow_html=True)
+            if num_games == 0:
+                est_height = 150
+            else:
+                num_categories = len(set(r['League'] for r in data))
+                est_height = 80 + (num_games * 55) + (num_categories * 35)
+                
+            shortest_col_idx = col_heights.index(min(col_heights))
+            
+            col_assignments[shortest_col_idx].append(league)
+            col_heights[shortest_col_idx] += est_height
+            
+        for i in range(num_cols):
+            with cols[i]:
+                # 💡 在每個區塊的渲染也綁定動態的 key
+                st.container(key=f"col_{i}_{st.session_state['render_key']}")
+                for league in col_assignments[i]:
+                    icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
+                    html_content = get_table_html(f"{icon} {league}", league_data[league])
+                    
+                    # 💡 為了徹底避免重複，我們在 markdown 的 key 上也加上動態 ID
+                    st.markdown(html_content, unsafe_allow_html=True)
 else:
     st.warning("📡 請由左側面板啟動賽事數據鏈路...")
 
