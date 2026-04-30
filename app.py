@@ -89,8 +89,11 @@ if active_leagues:
     refresh_ms = 10000 if is_live else 60000
     st_autorefresh(interval=refresh_ms, key="smart_live_refresh")
 
-    st.markdown(
-        f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {datetime.now(tw_tz).strftime('%H:%M:%S')} | REFRESH: {refresh_ms//1000}s</span>",
+    # 時間戳移至側邊欄最底部，避免擠壓主內容區塊
+    st.sidebar.markdown(
+        f"<div style='position:fixed; bottom:18px; left:0; width:230px; padding: 0 16px;'>"
+        f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {datetime.now(tw_tz).strftime('%H:%M:%S')} | REFRESH: {refresh_ms//1000}s</span>"
+        f"</div>",
         unsafe_allow_html=True
     )
 
