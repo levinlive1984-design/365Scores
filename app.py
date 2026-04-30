@@ -12,13 +12,11 @@ st.set_page_config(
 )
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：極簡化控制 ---
+# --- 側邊欄：極簡化控制 (已移除資產與版本資訊) ---
 with st.sidebar:
     st.markdown("## 🏆 戰情監控中心")
     selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
     st.divider()
-    st.caption("資產狀況：853 元")
-    st.caption("策略版本：V5.0")
 
 # --- HTML 渲染引擎 ---
 def render_html_table(data_list):
@@ -53,7 +51,7 @@ def render_html_table(data_list):
     html += "</tbody></table>"
     st.markdown(html, unsafe_allow_html=True)
 
-# --- 介面優化 (已解除 header 隱藏，側邊欄按鈕不再消失) ---
+# --- 介面優化 ---
 st.markdown("<style>.block-container { padding-top: 1rem !important; }</style>", unsafe_allow_html=True)
 
 current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
