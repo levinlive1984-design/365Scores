@@ -4,7 +4,6 @@ from datetime import datetime
 import pytz
 from api365_utils import get_365_scoreboard
 
-# --- 系統配置 ---
 st.set_page_config(
     page_title="Gemini 體育戰情系統 2.0", 
     layout="wide",
@@ -12,7 +11,6 @@ st.set_page_config(
 )
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 狀態初始化 ---
 if 'toggle_nba' not in st.session_state: st.session_state.toggle_nba = True
 if 'toggle_mlb' not in st.session_state: st.session_state.toggle_mlb = True
 if 'toggle_npb' not in st.session_state: st.session_state.toggle_npb = False
@@ -26,7 +24,6 @@ def emergency_reset():
     st.session_state.toggle_kbo = False
     st.session_state.toggle_tennis = False
 
-# --- 側邊欄：戰術控制面板 ---
 with st.sidebar:
     st.markdown("## 🛰️ 戰情調度中心")
     selected_date = st.date_input("🗓️ 調閱日期", datetime.now(tw_tz).date())
@@ -48,12 +45,10 @@ with st.sidebar:
     if show_tennis: active_leagues.append("Tennis")
 
     st.divider()
-    st.button("🔴 緊急重置看板", on_click=emergency_reset, help="將所有模組恢復至預設狀態 (僅開啟 NBA 與 MLB)")
+    st.button("🔴 緊急重置看板", on_click=emergency_reset, help="將所有模組恢復至預設狀態")
 
-# --- 頁面主體預留區 ---
 main_container = st.empty()
 
-# --- HTML 渲染引擎 ---
 def get_table_html(title, data_list):
     html = f"### {title}\n"
     if not data_list:
@@ -86,7 +81,6 @@ def get_table_html(title, data_list):
     table_html += "</tbody></table>"
     return html + table_html
 
-# --- 戰情邏輯與顯示 ---
 with main_container.container():
     st.markdown("""
         <style>
@@ -115,10 +109,10 @@ with main_container.container():
                 elif league == "KBO":
                     st.markdown(get_table_html("⚾ KBO (韓職)", get_365_scoreboard('kbo', selected_date)), unsafe_allow_html=True)
                 elif league == "Tennis":
-                    st.markdown("### 🎾 Tennis (網球)\n*(等待 ID 接入)*")
+                    # 網球模組正式上線
+                    st.markdown(get_table_html("🎾 Tennis (網球)", get_365_scoreboard('tennis', selected_date)), unsafe_allow_html=True)
     else:
         st.warning("📡 請由左側面板啟動賽事數據鏈路...")
 
-# --- 戰情心跳 ---
 time.sleep(10)
 st.rerun()
