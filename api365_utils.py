@@ -3,8 +3,14 @@ from datetime import datetime
 
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
-    # NBA = 103, MLB = 438
-    comp_id = 103 if league_type == 'nba' else 438
+    
+    # 聯賽 ID 精確映射：NBA=103, MLB=438, NPB=5482
+    comp_map = {
+        'nba': 103, 
+        'mlb': 438,
+        'npb': 5482
+    }
+    comp_id = comp_map.get(league_type, 103)
     
     url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&competitions={comp_id}&startDate={date_str}&endDate={date_str}&showOdds=true"
     
@@ -31,11 +37,10 @@ def get_365_scoreboard(league_type, target_date):
                 status_text = "已結束"
             elif status_group == 3:
                 state = 'in'
-                # --- MLB 專屬優化：移除局數後方的數字 ---
-                if league_type == 'mlb':
+                # 棒球類別 (MLB, NPB) 統一過濾局數雜訊
+                if league_type in ['mlb', 'npb']:
                     status_text = game.get('statusText', '')
                 else:
-                    # NBA 保留節數與時間 (例如: 第4節 06:19)
                     status_text = f"{game.get('statusText', '')} {game.get('gameTimeDisplay', '')}".strip()
             else:
                 state = 'pre'
@@ -55,7 +60,6 @@ def get_365_scoreboard(league_type, target_date):
                 "Home": home.get('name', 'TBD'),
                 "Score": f"{int(away.get('score', 0))} - {int(home.get('score', 0))}" if state != 'pre' else "-"
             })
-            
         return parsed_data
     except Exception:
         return []
