@@ -17,15 +17,11 @@ def setup_cyber_css():
                 box-shadow: 0 0 5px rgba(0,255,0,0.3);
             }
             
-            /* 🏆 終極無縫刷新術 (Seamless Refresh) */
-            /* 將讀取中(stale)的舊畫面透明度強制鎖定為 1，徹底消除白屏與閃爍 */
+            /* 🎯 修復卡位 Bug：微透明欺騙術 */
+            /* 讓透明度降到 0.99，肉眼完全看不出變暗，但能觸發 React 的動畫結束事件，讓廢棄區塊順利被回收 */
             [data-stale="true"] { 
-                opacity: 1 !important; 
-            }
-            
-            /* 關閉 Streamlit 預設的漸變動畫，讓新舊數據達到瞬間置換 */
-            div[data-testid="stVerticalBlock"] { 
-                transition: none !important; 
+                opacity: 0.99 !important; 
+                transition: opacity 0.01s ease-out !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -56,17 +52,14 @@ def get_table_html(title, data_list):
     
     current_league = None
     for row in data_list:
-        # 分類橫桿
         if row['League'] != current_league:
             current_league = row['League']
             html += "<tr style='background-color: #e9ecef; font-weight: bold; color: #222;'>"
             html += f"<td colspan='4' style='padding: 6px 12px; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; font-size: 0.85em;'>{current_league}</td></tr>"
 
-        # 狀態顏色
         status_style = "color: #dc3545; font-weight: bold;" if row['State'] == 'in' else ""
         status_box = f"<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>{row['Status']}</span>" if row['State'] == 'post' else row['Status']
         
-        # 賽博風 "VS" 標示
         match_html = f"{row['Away']} <span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span> {row['Home']}"
             
         html += "<tr style='border-bottom: 1px solid #eee;'>"
