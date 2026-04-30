@@ -4,21 +4,17 @@ from datetime import datetime
 import pytz
 from espn_utils import get_espn_scoreboard
 
-# --- 戰情系統初始化 ---
+# --- 戰情系統配置 ---
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：基礎資訊 ---
-st.sidebar.markdown(f"### 🛡️ 戰情系統 2.0")
-st.sidebar.markdown(f"**當前資產：** 853 元")
-st.sidebar.markdown(f"**策略版本：** V5.0 (Cross-ball)")
+# --- 側邊欄：僅保留日期選擇器 ---
+with st.sidebar:
+    selected_date = st.date_input("📅 調閱賽事日期", datetime.now(tw_tz).date())
 
-# --- 主頁面日期選擇區 ---
+# --- 主頁面 ---
 st.title("🏆 體育戰情即時監控中心")
-
-# 將日期選擇器放在主頁面頂部，確保 100% 可見
-selected_date = st.date_input("📅 請選擇欲調閱的賽事日期", datetime.now(tw_tz).date())
-st.success(f"🔍 目前調閱日期：**{selected_date.strftime('%Y-%m-%d')}**")
+st.success(f"📊 目前調閱日期：**{selected_date.strftime('%Y-%m-%d')}**")
 
 st.divider()
 
@@ -47,7 +43,7 @@ st.subheader("🧪 數據抓取研究區 (NPB & Tennis)")
 t_npb, t_tennis = st.tabs(["⚾ 日本職棒 (NPB)", "🎾 網球 (Tennis)"])
 
 with t_npb:
-    st.write("正在開發對接 TheScore API，解決日本職棒數據涵蓋問題...")
+    st.write("正在開發對接新的數據接口，解決 17:00 開賽的日本職棒問題...")
 
 with t_tennis:
     st.write("正在開發全場次網球解析器...")
