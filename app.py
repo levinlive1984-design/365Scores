@@ -7,7 +7,7 @@ import pytz
 from api365_utils import get_365_scoreboard
 from ui_renderer import setup_cyber_css, get_table_html
 
-st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="365賽程抓爬網", layout="wide", initial_sidebar_state="expanded")
 tw_tz = pytz.timezone('Asia/Taipei')
 
 # 載入純淨版賽博視覺 CSS
