@@ -1,22 +1,22 @@
 import streamlit as st
-import time  # 引入時間模組
+import time
 from datetime import datetime
 import pytz
-from espn_utils import get_espn_scoreboard
+# 導入我們最新的 365 API 模組
+from 365_utils import get_365_scoreboard
 
-# 系統配置
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：極簡控制與頻率設定 ---
+# --- 側邊欄 ---
 with st.sidebar:
     st.markdown("## 🏆 體育戰情監控")
     selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
     st.divider()
-    # 新增：讓你可以自由控制多久去 ESPN 抓一次資料
-    refresh_rate = st.selectbox("自動更新頻率", [10, 30, 60], index=1, format_func=lambda x: f"每 {x} 秒刷新")
+    # 輪詢頻率設定
+    refresh_rate = st.selectbox("自動更新頻率", [5, 10, 30], index=1, format_func=lambda x: f"每 {x} 秒刷新")
 
-# --- 強制 HTML 渲染引擎 ---
+# --- HTML 渲染引擎 ---
 def render_html_table(data_list):
     if not data_list:
         st.write("該日期暫無賽事數據。")
@@ -48,13 +48,13 @@ def render_html_table(data_list):
         html += f"<td style='padding: 12px;'>{row['Time']}</td>"
         html += f"<td style='padding: 12px;'>{status_html}</td>"
         html += f"<td style='padding: 12px;'>{match_html}</td>"
-        html += f"<td style='padding: 12px; font-weight: bold;'>{row['Score']}</td>"
+        html += f"<td style='padding: 12px; font-weight: bold; font-size: 1.1em;'>{row['Score']}</td>"
         html += "</tr>"
         
     html += "</tbody></table>"
     st.markdown(html, unsafe_allow_html=True)
 
-# --- 主畫面空間優化 ---
+# --- 版面優化與更新時間戳記 ---
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
@@ -62,23 +62,24 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 顯示最後更新時間，證明系統正在自動跳動
 current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
-st.caption(f"⏱️ 最後更新時間：{current_time} (系統將每 {refresh_rate} 秒自動抓取最新比分)")
+st.caption(f"⏱️ 365Scores 直連中 | 最後更新：{current_time} (系統每 {refresh_rate} 秒抓取)")
 
+# --- 雙欄位佈局 ---
 col_nba, col_mlb = st.columns(2)
 
 with col_nba:
     st.markdown("### 🏀 NBA")
-    nba_data = get_espn_scoreboard('basketball', 'nba', selected_date)
+    # 使用 365 API 抓取籃球
+    nba_data = get_365_scoreboard('nba', selected_date)
     render_html_table(nba_data)
 
 with col_mlb:
     st.markdown("### ⚾ MLB")
-    mlb_data = get_espn_scoreboard('baseball', 'mlb', selected_date)
+    # 使用 365 API 抓取棒球
+    mlb_data = get_365_scoreboard('mlb', selected_date)
     render_html_table(mlb_data)
 
-# --- 戰情心跳：自動刷新邏輯 ---
-# 放置於代碼最底層，確保畫面渲染完畢後才開始倒數
+# --- 戰情心跳 ---
 time.sleep(refresh_rate)
 st.rerun()
