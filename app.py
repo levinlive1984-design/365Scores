@@ -12,6 +12,22 @@ st.set_page_config(
 )
 tw_tz = pytz.timezone('Asia/Taipei')
 
+# --- 狀態初始化 (Session State) ---
+# 這是真正的重置關鍵：設定每個開關的「靈魂記憶」
+if 'toggle_nba' not in st.session_state: st.session_state.toggle_nba = True
+if 'toggle_mlb' not in st.session_state: st.session_state.toggle_mlb = True
+if 'toggle_npb' not in st.session_state: st.session_state.toggle_npb = False
+if 'toggle_kbo' not in st.session_state: st.session_state.toggle_kbo = False
+if 'toggle_tennis' not in st.session_state: st.session_state.toggle_tennis = False
+
+# 定義真正的「緊急重置」功能
+def emergency_reset():
+    st.session_state.toggle_nba = True
+    st.session_state.toggle_mlb = True
+    st.session_state.toggle_npb = False
+    st.session_state.toggle_kbo = False
+    st.session_state.toggle_tennis = False
+
 # --- 側邊欄：戰術控制面板 ---
 with st.sidebar:
     st.markdown("## 🛰️ 戰情調度中心")
@@ -19,15 +35,14 @@ with st.sidebar:
     st.divider()
     
     st.markdown("### 🔌 模組撥桿 (Toggle)")
-    # 使用 Toggle 切換開關，營造駕駛艙控制感
-    # 將 NBA 和 MLB 預設設為 True (開啟)
-    show_nba = st.toggle("🏀 NBA 數據鏈路", value=True)
-    show_mlb = st.toggle("⚾ MLB 數據鏈路", value=True)
-    show_npb = st.toggle("⚾ NPB 日職模組", value=False)
-    show_kbo = st.toggle("⚾ KBO 韓職模組", value=False)
-    show_tennis = st.toggle("🎾 Tennis 網球監控", value=False)
     
-    # 根據開關狀態動態生成選中清單
+    # 將開關與 Session State 綁定
+    show_nba = st.toggle("🏀 NBA 數據鏈路", key='toggle_nba')
+    show_mlb = st.toggle("⚾ MLB 數據鏈路", key='toggle_mlb')
+    show_npb = st.toggle("⚾ NPB 日職模組", key='toggle_npb')
+    show_kbo = st.toggle("⚾ KBO 韓職模組", key='toggle_kbo')
+    show_tennis = st.toggle("🎾 Tennis 網球監控", key='toggle_tennis')
+    
     active_leagues = []
     if show_nba: active_leagues.append("NBA")
     if show_mlb: active_leagues.append("MLB")
@@ -36,8 +51,9 @@ with st.sidebar:
     if show_tennis: active_leagues.append("Tennis")
 
     st.divider()
-    if st.button("🔴 緊急重置看板"):
-        st.rerun()
+    
+    # 掛載真正的重置功能 (on_click)
+    st.button("🔴 緊急重置看板", on_click=emergency_reset, help="將所有模組恢復至預設狀態 (僅開啟 NBA 與 MLB)")
 
 # --- 頁面主體預留區 ---
 main_container = st.empty()
@@ -77,11 +93,9 @@ def get_table_html(title, data_list):
 
 # --- 戰情邏輯與顯示 ---
 with main_container.container():
-    # 注入 CSS：讓 Toggle 開關與標題更具科技感
     st.markdown("""
         <style>
             .block-container { padding-top: 1rem !important; }
-            /* 讓最後更新時間帶點電子錶的感覺 */
             .update-timestamp { font-family: 'Courier New', monospace; color: #00FF00; background: #000; padding: 2px 8px; border-radius: 4px; }
         </style>
     """, unsafe_allow_html=True)
