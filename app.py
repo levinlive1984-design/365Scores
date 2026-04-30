@@ -12,36 +12,38 @@ st.set_page_config(
 )
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：看板調度中心 ---
+# --- 側邊欄：調度中心 ---
 with st.sidebar:
     st.markdown("## 🛡️ 戰情調度中心")
     selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
-    
     st.divider()
     
-    # 實現「拖曳式頁籤」功能的替代方案：側邊欄掛載區
-    # 預設僅選中 NBA 與 MLB，NPB 則待命於選單中
+    # 這是你的「側邊欄掛載區」
+    # 預設只顯示 NBA 和 MLB，NPB 則待命於選單中
     active_leagues = st.multiselect(
-        "看板顯示內容 (勾選後自動占用欄位)",
+        "看板顯示內容",
         ["NBA", "MLB", "NPB"],
         default=["NBA", "MLB"],
         help="勾選後賽事將自動填補主畫面空白處"
     )
 
-# --- HTML 渲染引擎 ---
-def render_html_table(title, data_list):
-    st.markdown(f"### {title}")
-    if not data_list:
-        st.write("該日期暫無賽事數據。")
-        return
+# --- 頁面主體預留區 (這是解決殘影的關鍵) ---
+# 先建立一個空容器，確保內容每次都是「覆蓋」而非「堆疊」
+main_container = st.empty()
 
-    html = "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 25px; font-size: 0.95em;'>"
-    html += "<thead><tr style='background-color: #f8f9fa; border-bottom: 2px solid #333;'>"
-    html += "<th style='text-align: left; padding: 10px;'>時間</th>"
-    html += "<th style='text-align: left; padding: 10px;'>狀態</th>"
-    html += "<th style='text-align: left; padding: 10px;'>對戰組合</th>"
-    html += "<th style='text-align: left; padding: 10px;'>比分</th>"
-    html += "</tr></thead><tbody>"
+# --- HTML 渲染引擎 ---
+def get_table_html(title, data_list):
+    html = f"### {title}"
+    if not data_list:
+        return f"### {title}\n該日期暫無賽事數據。"
+
+    table_html = "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 25px; font-size: 0.95em;'>"
+    table_html += "<thead><tr style='background-color: #f8f9fa; border-bottom: 2px solid #333;'>"
+    table_html += "<th style='text-align: left; padding: 10px;'>時間</th>"
+    table_html += "<th style='text-align: left; padding: 10px;'>狀態</th>"
+    table_html += "<th style='text-align: left; padding: 10px;'>對戰組合</th>"
+    table_html += "<th style='text-align: left; padding: 10px;'>比分</th>"
+    table_html += "</tr></thead><tbody>"
     
     for row in data_list:
         if row['State'] == 'post':
@@ -53,35 +55,35 @@ def render_html_table(title, data_list):
             
         match_html = f"{row['Away']} <span style='color: red; font-weight: bold;'>vs</span> {row['Home']}"
             
-        html += "<tr style='border-bottom: 1px solid #dee2e6;'>"
-        html += f"<td style='padding: 10px;'>{row['Time']}</td>"
-        html += f"<td style='padding: 10px;'>{status_html}</td>"
-        html += f"<td style='padding: 10px;'>{match_html}</td>"
-        html += f"<td style='padding: 10px; font-weight: bold;'>{row['Score']}</td>"
-        html += "</tr>"
-    html += "</tbody></table>"
-    st.markdown(html, unsafe_allow_html=True)
+        table_html += "<tr style='border-bottom: 1px solid #dee2e6;'>"
+        table_html += f"<td style='padding: 10px;'>{row['Time']}</td>"
+        table_html += f"<td style='padding: 10px;'>{status_html}</td>"
+        table_html += f"<td style='padding: 10px;'>{match_html}</td>"
+        table_html += f"<td style='padding: 10px; font-weight: bold;'>{row['Score']}</td>"
+        table_html += "</tr>"
+    table_html += "</tbody></table>"
+    return html + table_html
 
-# --- 主畫面佈局 (動態欄位計算) ---
-st.markdown("<style>.block-container { padding-top: 1rem !important; }</style>", unsafe_allow_html=True)
+# --- 戰情邏輯與顯示 ---
+# 將所有內容包在 container 裡一次性輸出
+with main_container.container():
+    st.markdown("<style>.block-container { padding-top: 1rem !important; }</style>", unsafe_allow_html=True)
+    
+    current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
+    st.caption(f"⏱️ 直連 365Scores | 每 10s 自動更新 | 最後更新：{current_time}")
 
-# 顯示同步資訊
-current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
-st.caption(f"⏱️ 365Scores 直連 | 10s 自動刷新中 | 最後更新：{current_time}")
+    # 動態生成 2 欄位佈局
+    cols = st.columns(2)
 
-# 動態生成欄位：維持 2 欄位佈局，實現「下方自動占用」
-cols = st.columns(2)
-
-# 根據側邊欄的選擇順序，動態分配到左 (col1) 或右 (col2)
-# 如果你選了 NBA, MLB, NPB -> NBA 在左, MLB 在右, NPB 會在左(NBA下面)
-for i, league in enumerate(active_leagues):
-    with cols[i % 2]:
-        if league == "NBA":
-            render_html_table("🏀 NBA", get_365_scoreboard('nba', selected_date))
-        elif league == "MLB":
-            render_html_table("⚾ MLB", get_365_scoreboard('mlb', selected_date))
-        elif league == "NPB":
-            render_html_table("⚾ NPB (日職)", get_365_scoreboard('npb', selected_date))
+    # 依照勾選順序分流到左右兩欄
+    for i, league in enumerate(active_leagues):
+        with cols[i % 2]:
+            if league == "NBA":
+                st.markdown(get_table_html("🏀 NBA", get_365_scoreboard('nba', selected_date)), unsafe_allow_html=True)
+            elif league == "MLB":
+                st.markdown(get_table_html("⚾ MLB", get_365_scoreboard('mlb', selected_date)), unsafe_allow_html=True)
+            elif league == "NPB":
+                st.markdown(get_table_html("⚾ NPB (日職)", get_365_scoreboard('npb', selected_date)), unsafe_allow_html=True)
 
 # --- 戰情心跳 ---
 time.sleep(10)
