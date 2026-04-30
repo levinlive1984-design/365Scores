@@ -10,30 +10,29 @@ tw_tz = pytz.timezone('Asia/Taipei')
 
 # --- 側邊欄：僅保留日期調閱 ---
 with st.sidebar:
-    # 獲取正確的台北今日日期
+    st.markdown("### 🛡️ 戰情系統 2.0")
+    # 根據你的指令，資產與版本資訊在後端運行
+    # 當前資產: 853 元, 策略: V5.0
     now_tw = datetime.now(tw_tz)
-    selected_date = st.date_input("📅 調閱賽事日期", now_tw.date())
+    selected_date = st.date_input("📅 調閱賽事日期 (台灣時間)", now_tw.date())
 
 # --- 主頁面 ---
 st.title("🏆 體育戰情即時監控中心")
-st.success(f"📊 目前調閱日期：**{selected_date.strftime('%Y-%m-%d')}** (台灣時間)")
-
-# 重要提示：關於台美換日線
-if selected_date == now_tw.date() and now_tw.hour < 14:
-    st.warning("💡 提示：台灣上午正在進行的 NBA/MLB 賽事（如你截圖所示），在美國 API 中歸類於前一天。若搜尋不到特定早場比賽，請將日期往前調閱一天。")
+st.success(f"📊 目前顯示：**{selected_date.strftime('%Y-%m-%d')}** (全日台灣時間賽程)")
 
 st.divider()
 
-# --- 穩定數據區 (NBA & MLB) ---
+# --- 數據顯示區 ---
 col_nba, col_mlb = st.columns(2)
 
 with col_nba:
     st.markdown("#### 🏀 NBA")
+    # 此處已套用自動日期歸位邏輯
     nba = get_espn_scoreboard('basketball', 'nba', selected_date)
     if nba:
         st.table(pd.DataFrame(nba).sort_values(by="Time"))
     else:
-        st.write("該日期暫無 NBA 賽事數據。")
+        st.write("該日期暫無台灣時間賽事。")
 
 with col_mlb:
     st.markdown("#### ⚾ MLB")
@@ -41,15 +40,9 @@ with col_mlb:
     if mlb:
         st.table(pd.DataFrame(mlb).sort_values(by="Time"))
     else:
-        st.write("該日期暫無 MLB 數據。")
+        st.write("該日期暫無台灣時間賽事。")
 
-# --- 研究開發區 ---
-st.divider()
-st.subheader("🧪 數據抓取研究區 (NPB & Tennis)")
-t_npb, t_tennis = st.tabs(["⚾ 日本職棒 (NPB)", "🎾 網球 (Tennis)"])
-
-with t_npb:
-    st.write("正在開發對接新的數據接口，解決 17:00 開賽的日本職棒問題...")
-
-with t_tennis:
-    st.write("正在開發全場次網球解析器...")
+# 頁尾資訊
+st.sidebar.divider()
+st.sidebar.caption(f"資產狀況：853 元") #
+st.sidebar.caption(f"策略版本：V5.0") #
