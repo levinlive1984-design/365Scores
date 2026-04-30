@@ -1,4 +1,5 @@
 import streamlit as st
+import time  # 引入時間模組
 from datetime import datetime
 import pytz
 from espn_utils import get_espn_scoreboard
@@ -7,10 +8,13 @@ from espn_utils import get_espn_scoreboard
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：極簡控制 ---
+# --- 側邊欄：極簡控制與頻率設定 ---
 with st.sidebar:
     st.markdown("## 🏆 體育戰情監控")
     selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
+    st.divider()
+    # 新增：讓你可以自由控制多久去 ESPN 抓一次資料
+    refresh_rate = st.selectbox("自動更新頻率", [10, 30, 60], index=1, format_func=lambda x: f"每 {x} 秒刷新")
 
 # --- 強制 HTML 渲染引擎 ---
 def render_html_table(data_list):
@@ -58,6 +62,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# 顯示最後更新時間，證明系統正在自動跳動
+current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
+st.caption(f"⏱️ 最後更新時間：{current_time} (系統將每 {refresh_rate} 秒自動抓取最新比分)")
+
 col_nba, col_mlb = st.columns(2)
 
 with col_nba:
@@ -69,3 +77,8 @@ with col_mlb:
     st.markdown("### ⚾ MLB")
     mlb_data = get_espn_scoreboard('baseball', 'mlb', selected_date)
     render_html_table(mlb_data)
+
+# --- 戰情心跳：自動刷新邏輯 ---
+# 放置於代碼最底層，確保畫面渲染完畢後才開始倒數
+time.sleep(refresh_rate)
+st.rerun()
