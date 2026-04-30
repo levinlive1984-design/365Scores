@@ -1,91 +1,79 @@
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
-# --- 系統配置 ---
-st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
+# --- 戰情系統配置 ---
+st.set_page_config(page_title="Gemini 體育戰情系統 2.0 - 數據監控中心", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# 戰情系統標頭
-st.title("🛡️ 今日全賽程自動抓取 (ESPN 核心數據引擎)")
-st.sidebar.markdown(f"### 體育戰情系統 2.0\n**當前資產：** 853 元\n**系統時間：** {datetime.now(tw_tz).strftime('%H:%M:%S')}")
+# 側邊欄：戰情參數與資產
+st.sidebar.markdown("### 🛡️ 戰情系統 2.0")
+st.sidebar.markdown(f"**當前資產：** 853 元")
+st.sidebar.markdown(f"**戰情指令：** V5.0 (Cross-ball optimization)")
+st.sidebar.markdown(f"**更新時間：** {datetime.now(tw_tz).strftime('%H:%M:%S')}")
 
-def get_espn_data(sport, league):
+st.title("🏆 今日全賽程自動抓取 (Yahoo 全球數據源)")
+
+def fetch_yahoo_scores(league):
     """
-    sport: basketball, baseball, tennis
-    league: nba, mlb, npb, atp, wta
+    獲取 Yahoo Sports 的賽事數據
+    league slugs: nba, mlb, npb, tennis
     """
-    url = f"https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard"
+    # 這是 Yahoo 的公開 Scoreboard 資源 API 模式
+    url = f"https://ws-api.sports.yahoo.com/v1/editorial/s/scoreboard?leagues={league}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    }
+    
     try:
-        res = requests.get(url, timeout=10)
-        data = res.json()
-        events = data.get('events', [])
+        response = requests.get(url, headers=headers, timeout=10)
+        data = response.json()
+        games_raw = data.get('service', {}).get('scoreboard', {}).get('games', {})
         
         parsed_data = []
-        for ev in events:
-            # 時間轉換 (UTC -> 台北時間)
-            utc_time = datetime.strptime(ev['date'], "%Y-%m-%dT%H:%MZ").replace(tzinfo=pytz.utc)
+        for g_id, g in games_raw.items():
+            # 時間處理：Yahoo 是 ISO 格式字串
+            start_time_str = g.get('startTime')
+            utc_time = datetime.strptime(start_time_str, "%a, %d %b %Y %H:%M:%S %z")
             local_time = utc_time.astimezone(tw_tz).strftime('%H:%M')
             
-            # 對戰組合與比分
-            comp = ev['competitions'][0]
-            away = comp['competitors'][0]
-            home = comp['competitors'][1]
+            status = g.get('status', {}).get('type')
+            # 簡化狀態顯示
+            status_map = {"final": "已結束", "scheduled": "預計", "in_progress": "進行中", "postponed": "延賽"}
+            display_status = status_map.get(status, status)
             
-            status = ev['status']['type']['description']
-            # 簡化狀態名稱
-            if status == "Final": status = "已結束"
-            elif status == "Scheduled": status = "預計"
-            elif "In Progress" in status or "Half" in status: status = "進行中"
-
+            teams = g.get('teams', {})
+            home = teams.get('home', {})
+            away = teams.get('away', {})
+            
             parsed_data.append({
                 "Time": local_time,
-                "Status": status,
-                "Match": f"{away['team']['displayName']} @ {home['team']['displayName']}",
-                "Score": f"{away['score']} - {home['score']}" if status != "預計" else "-"
+                "Status": display_status,
+                "Match": f"{away.get('abbrName')} @ {home.get('abbrName')}",
+                "Score": f"{away.get('score', 0)} - {home.get('score', 0)}" if status != "scheduled" else "-"
             })
         return parsed_data
-    except:
+    except Exception as e:
         return []
 
-# --- 抓取邏輯 ---
-# 1. NBA
-st.header("🏀 NBA (美國職棒)")
-nba = get_espn_data('basketball', 'nba')
-if nba:
-    st.table(pd.DataFrame(nba).sort_values(by="Time"))
-else:
-    st.info("目前無 NBA 數據")
+# --- 分門別列顯示 ---
+categories = {
+    "🏀 NBA (美國職籃)": "nba",
+    "⚾ MLB (美國職棒)": "mlb",
+    "⚾ NPB (日本職棒)": "npb",
+    "🎾 網球 (ATP/WTA 職業賽)": "tennis"
+}
 
-# 2. MLB
-st.header("⚾ MLB (美國職棒)")
-mlb = get_espn_data('baseball', 'mlb')
-if mlb:
-    st.table(pd.DataFrame(mlb).sort_values(by="Time"))
-else:
-    st.info("目前無 MLB 數據")
+for label, slug in categories.items():
+    st.header(label)
+    res = fetch_yahoo_scores(slug)
+    if res:
+        df = pd.DataFrame(res).sort_values(by="Time")
+        st.table(df)
+    else:
+        st.info(f"目前無 {label} 數據更新，或賽季未處於當前時段。")
 
-# 3. 日本職棒 (NPB)
-st.header("⚾ 日本職棒 (NPB)")
-npb = get_espn_data('baseball', 'npb')
-if npb:
-    st.table(pd.DataFrame(npb).sort_values(by="Time"))
-else:
-    st.info("目前無 NPB 數據")
-
-# 4. 網球 (ATP + WTA 聯賽)
-st.header("🎾 網球 (ATP/WTA 職業巡迴賽)")
-atp = get_espn_data('tennis', 'atp')
-wta = get_espn_data('tennis', 'wta')
-tennis_all = atp + wta
-if tennis_all:
-    st.table(pd.DataFrame(tennis_all).sort_values(by="Time"))
-else:
-    st.info("目前無網球數據")
-
-# 戰意值評估區 (系統 2.0 預留位)
-st.sidebar.markdown("---")
-st.sidebar.subheader("戰意值評估 (Motivation)")
-st.sidebar.write("數據已同步，可開始市場誘盤解析。")
+st.markdown("---")
+st.caption("提示：若場次未顯示，請確認當前日期是否有正式賽事安排。網球數據涵蓋 ATP、WTA 主要巡迴賽。")
