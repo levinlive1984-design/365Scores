@@ -27,14 +27,13 @@ def get_365_scoreboard(league_type, target_date):
         parsed_data = []
         
         for game in games:
-            # 🎯 核心修正：偵測是否為系列賽容器 (季後賽常態)
-            # 如果 game 物件下面還有一個 'games' 列表，代表它是系列賽，我們要抓子層的 ID
-            inner_games = game.get('games', [])
-            if inner_games:
-                # 優先抓取當前的子比賽 ID，如果沒有則抓第一個
-                actual_game_id = inner_games[0].get('id')
-            else:
-                actual_game_id = game.get('id')
+            # 🎯 終極精準 ID 選取邏輯：
+            # 優先嘗試抓取 'gameId' (這是單場比賽 ID)，
+            # 如果是系列賽容器，則抓取內部子比賽的第一個 ID，
+            # 最後才退而求其次使用頂層 ID。
+            actual_id = game.get('gameId') or \
+                        (game.get('games', [])[0].get('id') if game.get('games') else None) or \
+                        game.get('id')
 
             sport_id = game.get('sportId')
             
@@ -58,11 +57,10 @@ def get_365_scoreboard(league_type, target_date):
                 
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
-            
             score_display = f"{int(away.get('score', 0))} - {int(home.get('score', 0))}" if state != 'pre' else "-"
 
-            # 🎯 建立最穩定的「真．比賽跳轉網址」
-            match_url = f"https://www.365scores.com/zh-tw/game/{actual_game_id}"
+            # 🎯 採用你提供的「跳轉 #id」機制，這是最穩定的格式
+            match_url = f"https://www.365scores.com/zh-tw/match/redirect#id={actual_id}"
 
             parsed_data.append({
                 "League": league_display_name,
