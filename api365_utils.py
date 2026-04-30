@@ -3,58 +3,88 @@ from datetime import datetime
 
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
-    target_iso = target_date.strftime('%Y-%m-%d')
     
-    # 1. API 路由設定 (維持系統 5.0 規格)
     if league_type == 'tennis':
-        url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true&withTop=true&onlyMajorGames=true"
+        url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true"
     else:
         comp_map = {'nba': 103, 'mlb': 438, 'npb': 5482, 'kbo': 7587, 'nhl': 366}
         comp_id = comp_map.get(league_type, 103)
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&competitions={comp_id}&startDate={date_str}&endDate={date_str}&showOdds=true"
     
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept-Language': 'zh-TW,zh;q=0.9',
+        'Origin': 'https://www.365scores.com',
+        'Referer': 'https://www.365scores.com/'
+    }
     
     try:
         res = requests.get(url, headers=headers, timeout=10).json()
+        
+        # --- 戰略級過濾：建立網球賽事血統圖譜 ---
+        country_dict = {c['id']: c.get('name', '') for c in res.get('countries', [])}
+        comp_tour_dict = {}
+        for comp in res.get('competitions', []):
+            # 把比賽 ID 對應到它所屬的巡迴賽層級 (ATP, WTA, Challenger 等)
+            comp_tour_dict[comp['id']] = country_dict.get(comp.get('countryId'), '')
+            
         games = res.get('games', [])
         parsed_data = []
         
         for game in games:
-            # 🎯 核心修復：獵殺單場比賽 ID
-            actual_game_id = None
-            inner_games = game.get('games', []) # 檢查是否有系列賽子列表
-            
-            if inner_games:
-                # 遍歷子比賽，找到日期相符的那一場 (例如活塞隊 4/30 那場)
-                for ig in inner_games:
-                    if target_iso in ig.get('startTime', ''):
-                        actual_game_id = ig.get('id') # 這就會抓到 4703600
-                        break
-                if not actual_game_id: actual_game_id = inner_games[0].get('id')
+            if league_type == 'tennis':
+                if game.get('sportId') != 3: continue
+                
+                # 取得該比賽的真實血統 (ATP, WTA)
+                tour_type = comp_tour_dict.get(game.get('competitionId'), '')
+                
+                # 絕對鐵血紀律：不是 ATP 也不是 WTA 的賽事，一律捨棄不顯示
+                if 'ATP' not in tour_type and 'WTA' not in tour_type:
+                    continue
+                    
+                # 重組分類橫桿名稱：捨棄後面的 " - Round of 16" 等贅字
+                # 組合出乾淨俐落的 "ATP - Madrid"
+                raw_name = game.get('competitionDisplayName', '網球賽事')
+                clean_name = raw_name.split(' - ')[0] 
+                league_display_name = f"{tour_type} - {clean_name}"
+                
             else:
-                actual_game_id = game.get('id')
+                if game.get('competitionId') != comp_id: continue
+                league_display_name = game.get('competitionDisplayName', '其他賽事')
 
-            # --- 數據解析 (維持戰情系統 2.0 邏輯) ---
             status_group = game.get('statusGroup', 1)
-            state = 'post' if status_group == 4 else ('in' if status_group == 3 else 'pre')
+            
+            if status_group == 4:
+                state, status_text = 'post', "已結束"
+            elif status_group == 3:
+                state, status_text = 'in', game.get('statusText', '')
+            else:
+                state, status_text = 'pre', game.get('statusText', '預計')
+                
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
-            score = f"{int(away.get('score', 0))} - {int(home.get('score', 0))}" if state != 'pre' else "-"
-
-            # 🎯 建立「終極自動跳轉網址」
-            # 只要 ID 是正確的單場 ID，這個連結會自動 301 跳轉到你要的那串長網址
-            match_url = f"https://www.365scores.com/zh-tw/game/{actual_game_id}"
-
+            
+            # 網球專屬局點處理
+            extra_score = ""
+            if league_type == 'tennis' and state == 'in':
+                for stage in game.get('stages', []):
+                    if stage.get('id') == 34:
+                        extra_score = f" <span style='font-size:0.85em; color:#888;'>({int(away.get('score', 0))}:{int(home.get('score', 0))})</span>"
+            
+            start_time_str = game.get('startTime', '')
+            time_display = start_time_str[11:16] if len(start_time_str) >= 16 else "--:--"
+            
+            if status_text == "胚胎移植後":
+                status_text = "延長賽 (OT)"
+            
             parsed_data.append({
-                "League": game.get('competitionDisplayName', ''),
-                "Time": (game.get('startTime', '')[11:16] if len(game.get('startTime', '')) >= 16 else "--:--"),
-                "Status": game.get('statusText', ''),
+                "League": league_display_name, # 這裡已經被替換成了 "ATP - Madrid"
+                "Time": time_display,
+                "Status": status_text,
                 "State": state,
                 "Away": away.get('name', 'TBD'),
                 "Home": home.get('name', 'TBD'),
-                "Score": score,
-                "Url": match_url
+                "Score": f"{int(away.get('score', 0))} - {int(home.get('score', 0))}{extra_score}" if state != 'pre' else "-"
             })
         return parsed_data
     except Exception:
