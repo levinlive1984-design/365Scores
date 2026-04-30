@@ -4,11 +4,9 @@ from datetime import datetime
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
     
-    # 邏輯分流：網球使用 sports=3 全域掃描，其餘使用 competitions ID
     if league_type == 'tennis':
-        url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true&withTop=true&onlyMajorGames=true"
+        url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true"
     else:
-        # 新增 NHL = 366 進入核心映射表
         comp_map = {'nba': 103, 'mlb': 438, 'npb': 5482, 'kbo': 7587, 'nhl': 366}
         comp_id = comp_map.get(league_type, 103)
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&competitions={comp_id}&startDate={date_str}&endDate={date_str}&showOdds=true"
@@ -22,12 +20,40 @@ def get_365_scoreboard(league_type, target_date):
     
     try:
         res = requests.get(url, headers=headers, timeout=10).json()
-        games = res.get('games', [])
         
+        # --- 戰略級過濾：建立網球賽事血統圖譜 ---
+        country_dict = {c['id']: c.get('name', '') for c in res.get('countries', [])}
+        comp_tour_dict = {}
+        for comp in res.get('competitions', []):
+            # 把比賽 ID 對應到它所屬的巡迴賽層級 (ATP, WTA, Challenger 等)
+            comp_tour_dict[comp['id']] = country_dict.get(comp.get('countryId'), '')
+            
+        games = res.get('games', [])
         parsed_data = []
+        
         for game in games:
-            # 狀態分級
+            if league_type == 'tennis':
+                if game.get('sportId') != 3: continue
+                
+                # 取得該比賽的真實血統 (ATP, WTA)
+                tour_type = comp_tour_dict.get(game.get('competitionId'), '')
+                
+                # 絕對鐵血紀律：不是 ATP 也不是 WTA 的賽事，一律捨棄不顯示
+                if 'ATP' not in tour_type and 'WTA' not in tour_type:
+                    continue
+                    
+                # 重組分類橫桿名稱：捨棄後面的 " - Round of 16" 等贅字
+                # 組合出乾淨俐落的 "ATP - Madrid"
+                raw_name = game.get('competitionDisplayName', '網球賽事')
+                clean_name = raw_name.split(' - ')[0] 
+                league_display_name = f"{tour_type} - {clean_name}"
+                
+            else:
+                if game.get('competitionId') != comp_id: continue
+                league_display_name = game.get('competitionDisplayName', '其他賽事')
+
             status_group = game.get('statusGroup', 1)
+            
             if status_group == 4:
                 state, status_text = 'post', "已結束"
             elif status_group == 3:
@@ -48,12 +74,11 @@ def get_365_scoreboard(league_type, target_date):
             start_time_str = game.get('startTime', '')
             time_display = start_time_str[11:16] if len(start_time_str) >= 16 else "--:--"
             
-            # 將 365Scores 荒謬的 "胚胎移植後" 修正回正常的 "延長賽"
             if status_text == "胚胎移植後":
                 status_text = "延長賽 (OT)"
             
             parsed_data.append({
-                "League": game.get('competitionDisplayName', '其他賽事'),
+                "League": league_display_name, # 這裡已經被替換成了 "ATP - Madrid"
                 "Time": time_display,
                 "Status": status_text,
                 "State": state,
