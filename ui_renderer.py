@@ -108,15 +108,16 @@ def get_table_html(title, data_list):
         match_text = f"{row['Away']} {vs_span} {row['Home']}"
 
         if match_url:
+            a_style = 'color:inherit;text-decoration:none;display:block'
+            a_over  = "this.style.color='#1a73e8'"
+            a_out   = "this.style.color='inherit'"
+            arrow   = '<span style="font-size:0.75em;color:#bbb;margin-left:4px">↗</span>'
             match_html = (
-                f"<a href='{match_url}' target='_blank' rel='noopener' "
-                f"style='color: inherit; text-decoration: none; display: block; "
-                f"transition: color 0.15s;' "
-                f"onmouseover="this.style.color='#1a73e8'" "
-                f"onmouseout="this.style.color='inherit'">"
-                f"{match_text} "
-                f"<span style='font-size:0.75em; color:#bbb; margin-left:4px;'>↗</span>"
-                f"</a>"
+                f'<a href="{match_url}" target="_blank" rel="noopener" '
+                f'style="{a_style}" '
+                f'onmouseover="{a_over}" '
+                f'onmouseout="{a_out}">'
+                f'{match_text} {arrow}</a>'
             )
         else:
             match_html = match_text
