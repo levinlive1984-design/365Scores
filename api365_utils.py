@@ -1,6 +1,25 @@
 import requests
 from datetime import datetime
 
+# 運動類型對應路徑
+SPORT_PATH = {
+    'nba': 'basketball', 'mlb': 'baseball', 'npb': 'baseball',
+    'kbo': 'baseball',   'nhl': 'hockey',   'tennis': 'tennis'
+}
+
+def _slug(name):
+    """把球隊名稱轉成 URL slug，例如 Detroit Pistons → detroit-pistons"""
+    import re
+    return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
+
+def _build_match_url(league_type, comp_id, away, home, game_id):
+    """組合出 365scores 比賽頁超連結"""
+    sport  = SPORT_PATH.get(league_type, 'sport')
+    c_slug = f"{league_type}-{comp_id}"
+    teams  = f"{_slug(away.get('name',''))}--{_slug(home.get('name',''))}"
+    ids    = f"{away.get('id','')}-{home.get('id','')}-{comp_id}"
+    return f"https://www.365scores.com/zh-tw/{sport}/match/{c_slug}/{teams}-{ids}#id={game_id}"
+
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
     
@@ -79,14 +98,22 @@ def get_365_scoreboard(league_type, target_date):
             if status_text == "胚胎移植後":
                 status_text = "延長賽 (OT)"
             
+            # 組合比賽超連結（網球用 game id 即可，其餘需 comp_id）
+            game_id = game.get('id', '')
+            if league_type == 'tennis':
+                match_url = f"https://www.365scores.com/zh-tw/tennis/match/{game_id}#id={game_id}"
+            else:
+                match_url = _build_match_url(league_type, comp_id, away, home, game_id)
+
             parsed_data.append({
-                "League": league_display_name, # 這裡已經被替換成了 "ATP - Madrid"
+                "League": league_display_name,
                 "Time": time_display,
                 "Status": status_text,
                 "State": state,
                 "Away": away.get('name', 'TBD'),
                 "Home": home.get('name', 'TBD'),
-                "Score": f"{int(away.get('score', 0))} - {int(home.get('score', 0))}{extra_score}" if state != 'pre' else "-"
+                "Score": f"{int(away.get('score', 0))} - {int(home.get('score', 0))}{extra_score}" if state != 'pre' else "-",
+                "URL": match_url
             })
         return parsed_data
     except Exception:
