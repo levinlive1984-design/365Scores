@@ -6,6 +6,7 @@ def get_espn_scoreboard(sport, league, target_date):
     tw_tz = pytz.timezone('Asia/Taipei')
     url = f"https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard"
     
+    # 執行雙日抓取確保台灣時間歸位
     date_list = [target_date - timedelta(days=1), target_date]
     all_events = []
     
@@ -21,22 +22,16 @@ def get_espn_scoreboard(sport, league, target_date):
     seen_ids = set()
 
     for ev in all_events:
-        if ev['id'] in seen_ids:
-            continue
-            
+        if ev['id'] in seen_ids: continue
         utc_time = datetime.strptime(ev['date'], "%Y-%m-%dT%H:%MZ").replace(tzinfo=pytz.utc)
         local_dt = utc_time.astimezone(tw_tz)
         
-        if local_dt.date() != target_date:
-            continue
-            
+        # 僅保留台灣日期當天的場次
+        if local_dt.date() != target_date: continue
         seen_ids.add(ev['id'])
-        local_time_str = local_dt.strftime('%H:%M')
         
         status_obj = ev['status']['type']
         state = status_obj['state']
-        
-        # 狀態處理邏輯
         status_text = "已結束" if state == 'post' else ("進行中" if state == 'in' else "預計")
         if state == 'in' and 'detail' in status_obj:
             status_text = status_obj['detail']
@@ -45,16 +40,14 @@ def get_espn_scoreboard(sport, league, target_date):
         away = comp['competitors'][0]['team']['displayName']
         home = comp['competitors'][1]['team']['displayName']
         
-        away_score = comp['competitors'][0].get('score', '0')
-        home_score = comp['competitors'][1].get('score', '0')
-
-        # 針對 vs 顏色與 Status 邏輯在 DataFrame 顯示時處理
+        # 封裝 HTML 結構以實現顏色要求
+        vs_html = f"{away} <span style='color:red; font-weight:bold;'>vs</span> {home}"
+        
         parsed_data.append({
-            "Time": local_time_str,
+            "Time": local_dt.strftime('%H:%M'),
             "Status": status_text,
-            "State": state, # 用於後續判斷底色
-            "Match": f"{away} <span style='color:red;'>vs</span> {home}",
-            "Score": f"{away_score} - {home_score}" if state != 'pre' else "-"
+            "State": state,
+            "Match": vs_html,
+            "Score": f"{comp['competitors'][0].get('score', '0')} - {comp['competitors'][1].get('score', '0')}" if state != 'pre' else "-"
         })
-    
     return parsed_data
