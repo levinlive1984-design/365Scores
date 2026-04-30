@@ -5,16 +5,16 @@ import pytz
 # 導入我們最新的 365 API 模組
 from api365_utils import get_365_scoreboard
 
+# 在 app.py 中，直接將這行寫在程式碼頂端或背景邏輯中
+refresh_rate = 10  # 鎖定 10 秒，不需要按鈕了
+
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
 # --- 側邊欄 ---
 with st.sidebar:
-    st.markdown("## 🏆 體育戰情監控")
+    st.markdown("## 🏆 戰情監控中心")
     selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
-    st.divider()
-    # 輪詢頻率設定
-    refresh_rate = st.selectbox("自動更新頻率", [5, 10, 30], index=1, format_func=lambda x: f"每 {x} 秒刷新")
 
 # --- HTML 渲染引擎 ---
 def render_html_table(data_list):
