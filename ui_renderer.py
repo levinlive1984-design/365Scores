@@ -103,8 +103,24 @@ def get_table_html(title, data_list):
         status_style = "color: #dc3545; font-weight: bold;" if row['State'] == 'in' else ""
         status_box = f"<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>{row['Status']}</span>" if row['State'] == 'post' else row['Status']
         
-        match_html = f"{row['Away']} <span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span> {row['Home']}"
-            
+        match_url = row.get('URL', '')
+        vs_span = "<span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span>"
+        match_text = f"{row['Away']} {vs_span} {row['Home']}"
+
+        if match_url:
+            match_html = (
+                f"<a href='{match_url}' target='_blank' rel='noopener' "
+                f"style='color: inherit; text-decoration: none; display: block; "
+                f"transition: color 0.15s;' "
+                f"onmouseover="this.style.color='#1a73e8'" "
+                f"onmouseout="this.style.color='inherit'">"
+                f"{match_text} "
+                f"<span style='font-size:0.75em; color:#bbb; margin-left:4px;'>↗</span>"
+                f"</a>"
+            )
+        else:
+            match_html = match_text
+
         html += "<tr style='border-bottom: 1px solid #eee;'>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em;'>{row['Time']}</td>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em; {status_style}'>{status_box}</td>"
