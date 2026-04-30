@@ -12,21 +12,34 @@ st.set_page_config(
 )
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：戰略調度中心 ---
+# --- 側邊欄：戰術控制面板 ---
 with st.sidebar:
-    st.markdown("## 🛡️ 戰情調度中心")
-    selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
+    st.markdown("## 🛰️ 戰情調度中心")
+    selected_date = st.date_input("🗓️ 調閱日期", datetime.now(tw_tz).date())
     st.divider()
     
-    # 擴展後的選單，預先加入 KBO 與 網球 待命
-    active_leagues = st.multiselect(
-        "看板顯示內容",
-        ["NBA", "MLB", "NPB", "KBO (韓職)", "Tennis (網球)"],
-        default=["NBA", "MLB"],
-        help="勾選後，畫面將自動調整欄位數量與位置"
-    )
+    st.markdown("### 🔌 模組撥桿 (Toggle)")
+    # 使用 Toggle 切換開關，營造駕駛艙控制感
+    # 將 NBA 和 MLB 預設設為 True (開啟)
+    show_nba = st.toggle("🏀 NBA 數據鏈路", value=True)
+    show_mlb = st.toggle("⚾ MLB 數據鏈路", value=True)
+    show_npb = st.toggle("⚾ NPB 日職模組", value=False)
+    show_kbo = st.toggle("⚾ KBO 韓職模組", value=False)
+    show_tennis = st.toggle("🎾 Tennis 網球監控", value=False)
+    
+    # 根據開關狀態動態生成選中清單
+    active_leagues = []
+    if show_nba: active_leagues.append("NBA")
+    if show_mlb: active_leagues.append("MLB")
+    if show_npb: active_leagues.append("NPB")
+    if show_kbo: active_leagues.append("KBO")
+    if show_tennis: active_leagues.append("Tennis")
 
-# --- 頁面主體預留區 (防止殘影) ---
+    st.divider()
+    if st.button("🔴 緊急重置看板"):
+        st.rerun()
+
+# --- 頁面主體預留區 ---
 main_container = st.empty()
 
 # --- HTML 渲染引擎 ---
@@ -64,22 +77,25 @@ def get_table_html(title, data_list):
 
 # --- 戰情邏輯與顯示 ---
 with main_container.container():
-    st.markdown("<style>.block-container { padding-top: 1rem !important; }</style>", unsafe_allow_html=True)
+    # 注入 CSS：讓 Toggle 開關與標題更具科技感
+    st.markdown("""
+        <style>
+            .block-container { padding-top: 1rem !important; }
+            /* 讓最後更新時間帶點電子錶的感覺 */
+            .update-timestamp { font-family: 'Courier New', monospace; color: #00FF00; background: #000; padding: 2px 8px; border-radius: 4px; }
+        </style>
+    """, unsafe_allow_html=True)
     
     current_time = datetime.now(tw_tz).strftime('%H:%M:%S')
-    st.caption(f"⏱️ 直連 365Scores | 每 10s 自動更新 | 最後更新：{current_time}")
+    st.markdown(f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {current_time}</span>", unsafe_allow_html=True)
 
-    # --- 關鍵修正：彈性網格佈局 ---
     num_leagues = len(active_leagues)
     
     if num_leagues > 0:
-        # 動態計算欄位：如果是 1 個就 1 欄，如果是 2 個以上，為了版面美觀，最多切成 3 欄
-        # 這能徹底解決「塞不下往下擠」的殘影問題
         num_cols = min(num_leagues, 3) 
         cols = st.columns(num_cols)
 
         for i, league in enumerate(active_leagues):
-            # 確保內容正確對應到對應的欄位，超過 3 個則自動折行到下一排
             with cols[i % num_cols]:
                 if league == "NBA":
                     st.markdown(get_table_html("🏀 NBA", get_365_scoreboard('nba', selected_date)), unsafe_allow_html=True)
@@ -87,11 +103,12 @@ with main_container.container():
                     st.markdown(get_table_html("⚾ MLB", get_365_scoreboard('mlb', selected_date)), unsafe_allow_html=True)
                 elif league == "NPB":
                     st.markdown(get_table_html("⚾ NPB (日職)", get_365_scoreboard('npb', selected_date)), unsafe_allow_html=True)
-                # 這裡預留了 KBO 與 網球的接孔，未來你抓到 ID 後就能直接填入
-                elif league == "KBO (韓職)":
-                    st.markdown("*(等待 KBO 模組接上)*", unsafe_allow_html=True)
-                elif league == "Tennis (網球)":
-                    st.markdown("*(等待網球模組接上)*", unsafe_allow_html=True)
+                elif league == "KBO":
+                    st.markdown("### ⚾ KBO (韓職)\n*(等待 ID 接入)*")
+                elif league == "Tennis":
+                    st.markdown("### 🎾 Tennis (網球)\n*(等待 ID 接入)*")
+    else:
+        st.warning("📡 請由左側面板啟動賽事數據鏈路...")
 
 # --- 戰情心跳 ---
 time.sleep(10)
