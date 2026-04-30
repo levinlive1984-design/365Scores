@@ -4,7 +4,7 @@ def setup_cyber_css():
     """賽博龐克 CSS 與優化版的過渡動畫"""
     st.markdown("""
         <style>
-            .block-container { padding-top: 1rem !important; } 
+            .block-container { padding-top: 2.5rem !important; } 
             
             /* 電子鐘樣式 */
             .update-timestamp { 
