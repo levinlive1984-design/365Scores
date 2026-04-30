@@ -68,6 +68,15 @@ def setup_cyber_css():
                 box-shadow: 0px 0px 0px #111;
                 transform: translate(3px, 3px);
             }
+
+            /* 5. 比賽列 hover 效果（純 CSS，避開 Streamlit JS 沙盒限制）*/
+            tr.match-row:hover {
+                background-color: #eef4ff !important;
+                cursor: pointer;
+            }
+            tr.match-row:hover .match-cell {
+                color: #1a73e8 !important;
+            }
         </style>
     """, unsafe_allow_html=True)
 
@@ -109,26 +118,19 @@ def get_table_html(title, data_list):
 
         if match_url:
             a_style = 'color:inherit;text-decoration:none;display:block'
-            a_over  = "this.style.color='#1a73e8'"
-            a_out   = "this.style.color='inherit'"
             arrow   = '<span style="font-size:0.75em;color:#bbb;margin-left:4px">↗</span>'
             match_html = (
                 f'<a href="{match_url}" target="_blank" rel="noopener" '
-                f'style="{a_style}" '
-                f'onmouseover="{a_over}" '
-                f'onmouseout="{a_out}">'
+                f'style="{a_style}">'
                 f'{match_text} {arrow}</a>'
             )
         else:
             match_html = match_text
 
-        row_style = "border-bottom: 1px solid #eee; cursor: pointer; transition: background-color 0.15s ease;"
-        hover_js  = "this.style.backgroundColor='#eef4ff'; this.querySelector('.match-cell').style.color='#1a73e8';"
-        unhover_js= "this.style.backgroundColor=''; this.querySelector('.match-cell').style.color='';"
-        html += f"<tr style='{row_style}' onmouseover=\"{hover_js}\" onmouseout=\"{unhover_js}\">"
+        html += "<tr class='match-row' style='border-bottom: 1px solid #eee;'>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em;'>{row['Time']}</td>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em; {status_style}'>{status_box}</td>"
-        html += f"<td class='match-cell' style='padding: 10px 12px; font-size: 0.95em; transition: color 0.15s ease;'>{match_html}</td>"
+        html += f"<td class='match-cell' style='padding: 10px 12px; font-size: 0.95em;'>{match_html}</td>"
         html += f"<td style='padding: 10px 12px; font-weight: bold; font-size: 1.05em;'>{row['Score']}</td></tr>"
     
     html += "</tbody></table></div></div>"
