@@ -4,11 +4,12 @@ from datetime import datetime
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
     
-    # 聯賽 ID 精確映射：NBA=103, MLB=438, NPB=5482
+    # 聯賽 ID 精確映射：加入 KBO = 7587
     comp_map = {
         'nba': 103, 
         'mlb': 438,
-        'npb': 5482
+        'npb': 5482,
+        'kbo': 7587
     }
     comp_id = comp_map.get(league_type, 103)
     
@@ -37,8 +38,8 @@ def get_365_scoreboard(league_type, target_date):
                 status_text = "已結束"
             elif status_group == 3:
                 state = 'in'
-                # 棒球類別 (MLB, NPB) 統一過濾局數雜訊
-                if league_type in ['mlb', 'npb']:
+                # 棒球類別 (MLB, NPB, KBO) 統一過濾局數雜訊
+                if league_type in ['mlb', 'npb', 'kbo']:
                     status_text = game.get('statusText', '')
                 else:
                     status_text = f"{game.get('statusText', '')} {game.get('gameTimeDisplay', '')}".strip()
