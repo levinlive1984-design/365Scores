@@ -23,10 +23,10 @@ def emergency_reset():
     for key in ['toggle_npb', 'toggle_kbo', 'toggle_tennis', 'toggle_nhl']: st.session_state[key] = False
 
 with st.sidebar:
-    st.markdown("## 🛰️ 戰情調度中心")
+    st.markdown("## 🛰️ 賽程調度中心")
     selected_date = st.date_input("🗓️ 調閱日期", datetime.now(tw_tz).date())
     st.divider()
-    st.markdown("### 🔌 模組撥桿 (Toggle)")
+    st.markdown("### 🔌 板塊撥桿 (Toggle)")
     
     # 移除了容易引發衝突的 on_change，讓 Streamlit 原生接管狀態改變
     show_nba = st.toggle("🏀 NBA", key='toggle_nba')
