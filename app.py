@@ -1,6 +1,8 @@
 import streamlit as st
 from datetime import datetime
 import pytz
+import math
+import time
 try:
     from streamlit_autorefresh import st_autorefresh
 except ModuleNotFoundError:
@@ -42,7 +44,7 @@ def emergency_reset():
 
 
 @st.cache_data(ttl=10, show_spinner=False)
-def fetch_league_data(active_leagues, selected_date):
+def fetch_league_data(active_leagues, selected_date, _time_bucket):
     """只快取 10 秒，專門給 live score 使用"""
     result = {}
     for league in active_leagues:
@@ -76,7 +78,8 @@ with st.sidebar:
 scoreboard_container = st.container()
 
 if active_leagues:
-    league_data = fetch_league_data(tuple(active_leagues), selected_date)
+    time_bucket = math.floor(time.time() / 10)  # 每 10 秒產生新 key，強制快取失效
+    league_data = fetch_league_data(tuple(active_leagues), selected_date, time_bucket)
 
     # 智慧判斷是否有 live game
     is_live = any(
