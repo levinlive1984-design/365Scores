@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 import pytz
 # 導入我們最新的 365 API 模組
-from 365_utils import get_365_scoreboard
+from api365_utils import get_365_scoreboard
 
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
