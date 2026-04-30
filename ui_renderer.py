@@ -1,7 +1,7 @@
 import streamlit as st
 
 def setup_cyber_css():
-    """還原最純粹的賽博龐克 CSS，移除會導致卡位的駭客指令"""
+    """賽博龐克 CSS 與優化版的過渡動畫"""
     st.markdown("""
         <style>
             .block-container { padding-top: 1rem !important; } 
@@ -15,6 +15,13 @@ def setup_cyber_css():
                 border-radius: 4px; 
                 border: 1px solid #00FF00;
                 box-shadow: 0 0 5px rgba(0,255,0,0.3);
+            }
+            
+            /* 🏆 幽靈過渡術：讓刷新時的殘影變得極度輕微 */
+            /* 將透明度降至 0.1 (近乎透明)，並將動畫時間縮短至 0.2 秒，達到「微閃即逝」的效果 */
+            [data-stale="true"] {
+                opacity: 0.1 !important;
+                transition: opacity 0.2s ease-in-out !important;
             }
         </style>
     """, unsafe_allow_html=True)
