@@ -91,12 +91,30 @@ def get_365_scoreboard(league_type, target_date):
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
             
-            # 網球專屬局點處理
+            # 網球專屬局點處理：加總所有盤的局數顯示
             extra_score = ""
             if league_type == 'tennis' and state == 'in':
-                for stage in game.get('stages', []):
+                stages = game.get('stages', [])
+                # id=34 是「當前局內的點數」，其餘 stage 才是每盤的局數
+                # homeValue/awayValue 是該盤局數，score 是盤數
+                total_away = 0
+                total_home = 0
+                has_data = False
+                for stage in stages:
                     if stage.get('id') == 34:
-                        extra_score = f" <span style='font-size:0.85em; color:#888;'>({int(away.get('score', 0))}:{int(home.get('score', 0))})</span>"
+                        continue  # 跳過當前局內點數
+                    av = stage.get('awayValue') or stage.get('awayScore', 0)
+                    hv = stage.get('homeValue') or stage.get('homeScore', 0)
+                    if av or hv:
+                        total_away += int(av)
+                        total_home += int(hv)
+                        has_data = True
+                if has_data:
+                    extra_score = (
+                        f" <span style='font-size:0.82em; color:#888; "
+                        f"background:#f5f5f5; padding:1px 5px; border-radius:3px;'>"
+                        f"{total_away}:{total_home}</span>"
+                    )
             
             start_time_str = game.get('startTime', '')
             time_display = start_time_str[11:16] if len(start_time_str) >= 16 else "--:--"
