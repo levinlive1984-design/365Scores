@@ -2,108 +2,100 @@ import streamlit as st
 import pandas as pd
 import requests
 from datetime import datetime
-import pytz
 
-st.set_page_config(page_title="今日棒球賽程", page_icon="⚾", layout="wide")
-st.title("⚾ 今日棒球賽程：MLB & 日本職棒")
-st.write("資料來源：365scores 即時 API | 自動轉換為台灣時間並排序")
+# --- 系統初始化 ---
+st.set_page_config(page_title="Gemini 體育戰情系統 2.0 - SofaScore 核心", layout="wide")
 
-@st.cache_data(ttl=60) # 快取 1 分鐘，確保比分是即時的
-def fetch_and_process_data():
+# 你的戰情系統基礎資訊
+st.sidebar.title("🛡️ 戰情系統 2.0")
+st.sidebar.info(f"當前資產：853 元\n策略版本：V5.0 (Moneyline/Spread)")
+
+def fetch_sofa_data(sport, date_str):
+    """
+    sport: 'basketball', 'baseball', 'tennis'
+    date_str: '2026-04-30'
+    """
+    url = f"https://api.sofascore.com/api/v1/sport/{sport}/scheduled-events/{date_str}"
+    
+    # 模擬瀏覽器 Header，這是繞過阻斷的關鍵
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://www.sofascore.com/',
+    }
+
     try:
-        # 1. 設定時區與今天日期
-        tz = pytz.timezone('Asia/Taipei')
-        today = datetime.now(tz).strftime("%d/%m/%Y")
-        
-        # 2. 呼叫 365scores 的隱藏 API 
-        # sports=5 代表棒球，langId=27 代表繁體中文
-        url = f"https://webws.365scores.com/web/games/?langId=27&timezoneName=Asia/Taipei&userCountryId=-1&appTypeId=5&sports=5&startDate={today}&endDate={today}"
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            st.error("無法連接到 365scores API")
-            return pd.DataFrame()
-            
-        data = response.json()
-        
-        # 3. 解析 JSON 資料
-        games = data.get("games", [])
-        competitions = {comp["id"]: comp["name"] for comp in data.get("competitions",[])}
-        competitors = {comp["id"]: comp["name"] for comp in data.get("competitors",[])}
-        
-        games_list =[]
-        
-        for game in games:
-            # 取得聯盟名稱
-            comp_id = game.get("competitionId")
-            league = competitions.get(comp_id, "未知聯盟")
-            
-            # 取得主客隊名稱
-            home_id = game.get("homeCompetitorId")
-            away_id = game.get("awayCompetitorId")
-            home_team = competitors.get(home_id, "未知主隊")
-            away_team = competitors.get(away_id, "未知客隊")
-            
-            # 取得比賽時間並轉換為台灣時間
-            start_time_str = game.get("startTime", "")
-            try:
-                dt = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
-                dt = dt.astimezone(tz)
-                time_display = dt.strftime("%H:%M")
-            except:
-                time_display = start_time_str
-                
-            # 取得比賽狀態與比分 (包含已結束、進行中)
-            status = game.get("justifiedStatusText", game.get("statusText", "未知"))
-            
-            home_score = game.get("homeCompetitor", {}).get("score", -1)
-            away_score = game.get("awayCompetitor", {}).get("score", -1)
-            
-            if home_score != -1 and away_score != -1:
-                score_display = f"{away_score} - {home_score}"
-            else:
-                score_display = "尚未開始"
-                
-            games_list.append({
-                "台灣時間": time_display,
-                "聯盟": league,
-                "狀態": status,
-                "客隊": away_team,
-                "比分 (客-主)": score_display,
-                "主隊": home_team,
-                "原始時間": start_time_str # 隱藏欄位，用來精準排序
-            })
-            
-        df = pd.DataFrame(games_list)
-        
-        if df.empty:
-            return df
-            
-        # 4. 過濾出「日本」與「MLB/美國」的賽事
-        # 365scores 的聯盟名稱通常包含 "日本" 或 "美國"
-        df = df[df["聯盟"].str.contains("日本|MLB|美國|大聯盟", na=False, case=False)]
-        
-        # 5. 依照時間排序
-        if "原始時間" in df.columns:
-            df = df.sort_values(by="原始時間").reset_index(drop=True)
-            df = df.drop(columns=["原始時間"])
-            
-        return df
-        
-    except Exception as e:
-        st.error(f"解析資料失敗: {e}")
-        return pd.DataFrame()
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json().get('events', [])
+        return []
+    except:
+        return []
 
-# 執行抓取並顯示資料
-with st.spinner('正在從 365scores API 抓取最新賽程與比分...'):
-    df_schedule = fetch_and_process_data()
+def process_events(events, filter_keywords=None):
+    results = []
+    for ev in events:
+        league_name = ev.get('tournament', {}).get('name', '')
+        
+        # 如果有設定關鍵字過濾 (例如日本職棒)
+        if filter_keywords and not any(k in league_name for k in filter_keywords):
+            continue
+            
+        # 取得時間並轉換為台灣時區 (API 通常是 UTC)
+        start_ts = ev.get('startTimestamp')
+        dt_object = datetime.fromtimestamp(start_ts)
+        time_str = dt_object.strftime('%H:%M')
+        
+        status = ev.get('status', {}).get('description', '未知')
+        home_team = ev.get('homeTeam', {}).get('name')
+        away_team = ev.get('awayTeam', {}).get('name')
+        home_score = ev.get('homeScore', {}).get('display', 0)
+        away_score = ev.get('awayScore', {}).get('display', 0)
 
-if not df_schedule.empty:
-    # 顯示資料表
-    st.dataframe(df_schedule, use_container_width=True, hide_index=True)
-else:
-    st.warning("今日目前沒有符合的賽程資料。")
+        results.append({
+            "Time": time_str,
+            "League": league_name,
+            "Status": status,
+            "Match": f"{away_team} @ {home_team}",
+            "Score": f"{away_score} - {home_score}" if status != "Not started" else "-"
+        })
+    return results
+
+# --- 介面呈現 ---
+st.title("🏆 今日全賽程自動抓取 (SofaScore 數據源)")
+target_date = "2026-04-30"
+
+# 1. NBA 抓取
+with st.expander("🏀 NBA 賽程 (含已結束)", expanded=True):
+    nba_raw = fetch_sofa_data('basketball', target_date)
+    nba_list = process_events(nba_raw, filter_keywords=["NBA"])
+    if nba_list:
+        st.table(pd.DataFrame(nba_list).sort_values(by="Time"))
+    else:
+        st.write("目前無 NBA 數據")
+
+# 2. MLB 抓取
+with st.expander("⚾ MLB 賽程 (含已結束)", expanded=True):
+    mlb_raw = fetch_sofa_data('baseball', target_date)
+    mlb_list = process_events(mlb_raw, filter_keywords=["MLB"])
+    if mlb_list:
+        st.table(pd.DataFrame(mlb_list).sort_values(by="Time"))
+    else:
+        st.write("目前無 MLB 數據")
+
+# 3. 日本職棒 (NPB) 抓取
+with st.expander("⚾ 日本職棒 賽程", expanded=True):
+    # NPB 同樣屬於 baseball 分類
+    npb_list = process_events(mlb_raw, filter_keywords=["NPB", "Professional Baseball", "Japan"])
+    if npb_list:
+        st.table(pd.DataFrame(npb_list).sort_values(by="Time"))
+    else:
+        st.write("目前無 NPB 數據")
+
+# 4. 網球 抓取 (這部分場次會非常多)
+with st.expander("🎾 網球 全賽程 (ATP/WTA/ITF)", expanded=True):
+    tennis_raw = fetch_sofa_data('tennis', target_date)
+    tennis_list = process_events(tennis_raw)
+    if tennis_list:
+        st.table(pd.DataFrame(tennis_list).sort_values(by="Time"))
+    else:
+        st.write("目前無網球數據")
