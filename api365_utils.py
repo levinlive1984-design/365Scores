@@ -12,11 +12,13 @@ def _slug(name):
     import re
     return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
 
-def _build_match_url(league_type, comp_id, away, home, game_id):
-    """組合出 365scores 比賽頁超連結"""
+def _build_match_url(league_type, comp_id, away, home, game_id, comp_slug=None):
+    """組合出 365scores 比賽頁超連結
+    comp_slug: 可手動傳入（網球用），否則自動用 league_type-comp_id
+    """
     sport  = SPORT_PATH.get(league_type, 'sport')
-    c_slug = f"{league_type}-{comp_id}"
-    teams  = f"{_slug(away.get('name',''))}--{_slug(home.get('name',''))}"
+    c_slug = comp_slug if comp_slug else f"{league_type}-{comp_id}"
+    teams  = f"{_slug(away.get('name',''))}-{_slug(home.get('name',''))}"
     ids    = f"{away.get('id','')}-{home.get('id','')}-{comp_id}"
     return f"https://www.365scores.com/zh-tw/{sport}/match/{c_slug}/{teams}-{ids}#id={game_id}"
 
@@ -45,9 +47,13 @@ def get_365_scoreboard(league_type, target_date):
         # --- 戰略級過濾：建立網球賽事血統圖譜 ---
         country_dict = {c['id']: c.get('name', '') for c in res.get('countries', [])}
         comp_tour_dict = {}
+        comp_slug_dict = {}  # comp_id → URL slug（例如 240 → "madrid"）
         for comp in res.get('competitions', []):
-            # 把比賽 ID 對應到它所屬的巡迴賽層級 (ATP, WTA, Challenger 等)
-            comp_tour_dict[comp['id']] = country_dict.get(comp.get('countryId'), '')
+            cid = comp['id']
+            comp_tour_dict[cid] = country_dict.get(comp.get('countryId'), '')
+            # 優先用 nameForURL，沒有就從 name 自己 slug
+            raw = comp.get('nameForURL') or comp.get('name', '')
+            comp_slug_dict[cid] = _slug(raw.split(' - ')[0]) if raw else str(cid)
             
         games = res.get('games', [])
         parsed_data = []
@@ -98,10 +104,12 @@ def get_365_scoreboard(league_type, target_date):
             if status_text == "胚胎移植後":
                 status_text = "延長賽 (OT)"
             
-            # 組合比賽超連結（網球用 game id 即可，其餘需 comp_id）
-            game_id = game.get('id', '')
+            # 組合比賽超連結
+            game_id  = game.get('id', '')
             if league_type == 'tennis':
-                match_url = f"https://www.365scores.com/zh-tw/tennis/match/{game_id}#id={game_id}"
+                t_comp_id = game.get('competitionId', '')
+                t_slug    = f"{comp_slug_dict.get(t_comp_id, str(t_comp_id))}-{t_comp_id}"
+                match_url = _build_match_url('tennis', t_comp_id, away, home, game_id, comp_slug=t_slug)
             else:
                 match_url = _build_match_url(league_type, comp_id, away, home, game_id)
 
