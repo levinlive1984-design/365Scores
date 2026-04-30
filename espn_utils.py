@@ -6,7 +6,7 @@ def get_espn_scoreboard(sport, league, target_date):
     tw_tz = pytz.timezone('Asia/Taipei')
     url = f"https://site.api.espn.com/apis/site/v2/sports/{sport}/{league}/scoreboard"
     
-    # 執行雙日抓取確保台灣時間歸位
+    # 雙日抓取確保台灣時間歸位逻辑
     date_list = [target_date - timedelta(days=1), target_date]
     all_events = []
     
