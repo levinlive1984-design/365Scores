@@ -1,7 +1,7 @@
 import streamlit as st
 
 def setup_cyber_css():
-    """封裝所有賽博龐克風格與系統核心 CSS"""
+    """還原最純粹的賽博龐克 CSS，移除會導致卡位的駭客指令"""
     st.markdown("""
         <style>
             .block-container { padding-top: 1rem !important; } 
@@ -16,20 +16,12 @@ def setup_cyber_css():
                 border: 1px solid #00FF00;
                 box-shadow: 0 0 5px rgba(0,255,0,0.3);
             }
-            
-            /* 🎯 修復卡位 Bug：微透明欺騙術 */
-            /* 讓透明度降到 0.99，肉眼完全看不出變暗，但能觸發 React 的動畫結束事件，讓廢棄區塊順利被回收 */
-            [data-stale="true"] { 
-                opacity: 0.99 !important; 
-                transition: opacity 0.01s ease-out !important;
-            }
         </style>
     """, unsafe_allow_html=True)
 
 def get_table_html(title, data_list):
     """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表"""
     
-    # --- 無資料時的空殼樣式 ---
     if not data_list:
         html = '<div style="margin-bottom: 30px;">'
         html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #f8f9fa; border: 2px solid #555; border-bottom: none; border-radius: 8px 15px 0 0; padding: 6px 18px; font-weight: bold; color: #555; letter-spacing: 1px;">{title}</div>'
@@ -38,7 +30,6 @@ def get_table_html(title, data_list):
         html += '</div></div>'
         return html
 
-    # --- 戰術頁籤外框設計 ---
     html = '<div style="margin-bottom: 30px;">'
     html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #fff; border: 2px solid #222; border-bottom: none; border-radius: 8px 16px 0 0; padding: 6px 20px; font-size: 1.1em; font-weight: 900; color: #111; letter-spacing: 1px; box-shadow: 2px -2px 0px rgba(0,0,0,0.05);">{title}</div>'
     html += '<div style="position: relative; z-index: 1; border: 2px solid #222; border-radius: 0 8px 8px 8px; background-color: #fff; padding: 0; overflow: hidden; box-shadow: 5px 5px 0px rgba(0,0,0,0.15);">'
