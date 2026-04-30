@@ -50,14 +50,46 @@ with st.sidebar:
 st.markdown(f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {datetime.now(tw_tz).strftime('%H:%M:%S')}</span>", unsafe_allow_html=True)
 
 if active_leagues:
-    cols = st.columns(min(len(active_leagues), 3))
-    for i, league in enumerate(active_leagues):
-        with cols[i % len(cols)]:
-            icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
+    # 1. 戰情預載：先抓取所有已啟動模組的數據
+    league_data = {}
+    for league in active_leagues:
+        api_id = league.lower().split(' ')[0] # 將字串轉成 api 的代號 (nba, mlb)
+        league_data[league] = get_365_scoreboard(api_id, selected_date)
+        
+    # 2. 動態計算欄位數量 (最多 3 欄)
+    num_cols = min(len(active_leagues), 3)
+    cols = st.columns(num_cols)
+    
+    # 3. 🎯 核心邏輯升級：空間自動填補演算法 (Greedy Allocation)
+    col_heights = [0] * num_cols
+    col_assignments = [[] for _ in range(num_cols)]
+    
+    for league in active_leagues:
+        data = league_data[league]
+        num_games = len(data)
+        
+        # 依照賽事數量，精準估算這張表在螢幕上會佔用多少「高度 (px)」
+        if num_games == 0:
+            est_height = 150 # 無賽事空殼的高度
+        else:
+            num_categories = len(set(r['League'] for r in data))
+            # 基礎框體高度 + 每場比賽高度 + 分類橫桿高度
+            est_height = 80 + (num_games * 55) + (num_categories * 35)
             
-            # 呼叫外部的 get_table_html 來套用頁籤設計
-            html_content = get_table_html(f"{icon} {league}", get_365_scoreboard(league.lower().split(' ')[0], selected_date))
-            st.markdown(html_content, unsafe_allow_html=True)
+        # 掃描雷達：找出目前高度最矮 (最空) 的欄位
+        shortest_col_idx = col_heights.index(min(col_heights))
+        
+        # 將該球種指派給最空的欄位，並將高度累加進去
+        col_assignments[shortest_col_idx].append(league)
+        col_heights[shortest_col_idx] += est_height
+        
+    # 4. 依照智能分配的結果渲染畫面
+    for i in range(num_cols):
+        with cols[i]:
+            for league in col_assignments[i]:
+                icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
+                html_content = get_table_html(f"{icon} {league}", league_data[league])
+                st.markdown(html_content, unsafe_allow_html=True)
 else:
     st.warning("📡 請由左側面板啟動賽事數據鏈路...")
 
