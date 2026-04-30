@@ -4,14 +4,18 @@ from datetime import datetime
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
     
-    # 邏輯分流：網球使用 sports=3 全域掃描，其餘使用 competitions ID
+    # --- 關鍵修改點開始 ---
+    # 針對網球啟動全域掃描 (sports=3)，並加上 withTop=true 與 onlyMajorGames=true
+    # 這樣 365Scores 的主機就會先幫我們把冷門賽事過濾掉，只回傳 ATP/WTA 這種大比賽
     if league_type == 'tennis':
-        url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true"
+        url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true&withTop=true&onlyMajorGames=true"
     else:
+        # 其他籃球、棒球維持精確 ID 鎖定
         comp_map = {'nba': 103, 'mlb': 438, 'npb': 5482, 'kbo': 7587}
         comp_id = comp_map.get(league_type, 103)
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&competitions={comp_id}&startDate={date_str}&endDate={date_str}&showOdds=true"
-    
+    # --- 關鍵修改點結束 ---
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept-Language': 'zh-TW,zh;q=0.9',
@@ -25,8 +29,13 @@ def get_365_scoreboard(league_type, target_date):
         
         parsed_data = []
         for game in games:
-            # 狀態分級
+            if league_type == 'tennis':
+                if game.get('sportId') != 3: continue
+            else:
+                if game.get('competitionId') != comp_id: continue
+
             status_group = game.get('statusGroup', 1)
+            
             if status_group == 4:
                 state, status_text = 'post', "已結束"
             elif status_group == 3:
@@ -37,7 +46,7 @@ def get_365_scoreboard(league_type, target_date):
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
             
-            # 網球專屬局點處理
+            # 網球專屬局點處理 (例如: 40:15)
             extra_score = ""
             if league_type == 'tennis' and state == 'in':
                 for stage in game.get('stages', []):
@@ -47,9 +56,9 @@ def get_365_scoreboard(league_type, target_date):
             start_time_str = game.get('startTime', '')
             time_display = start_time_str[11:16] if len(start_time_str) >= 16 else "--:--"
             
-            # 將聯賽名稱納入回傳資料中
             parsed_data.append({
-                "League": game.get('competitionDisplayName', '其他賽事'),
+                # 這裡保留了聯賽名稱，供 app.py 畫橫桿使用
+                "League": game.get('competitionDisplayName', '其他賽事'), 
                 "Time": time_display,
                 "Status": status_text,
                 "State": state,
