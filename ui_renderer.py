@@ -17,16 +17,23 @@ def setup_cyber_css():
                 box-shadow: 0 0 5px rgba(0,255,0,0.3);
             }
             
-            /* 視覺抹除術：防止殘影 */
-            [data-stale="true"] { opacity: 0 !important; display: none !important; }
-            div[data-testid="stVerticalBlock"] { transition: opacity 0s !important; }
+            /* 🏆 終極無縫刷新術 (Seamless Refresh) */
+            /* 將讀取中(stale)的舊畫面透明度強制鎖定為 1，徹底消除白屏與閃爍 */
+            [data-stale="true"] { 
+                opacity: 1 !important; 
+            }
+            
+            /* 關閉 Streamlit 預設的漸變動畫，讓新舊數據達到瞬間置換 */
+            div[data-testid="stVerticalBlock"] { 
+                transition: none !important; 
+            }
         </style>
     """, unsafe_allow_html=True)
 
 def get_table_html(title, data_list):
     """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表"""
     
-    # --- 無資料時的空殼樣式 (消除縮排陷阱) ---
+    # --- 無資料時的空殼樣式 ---
     if not data_list:
         html = '<div style="margin-bottom: 30px;">'
         html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #f8f9fa; border: 2px solid #555; border-bottom: none; border-radius: 8px 15px 0 0; padding: 6px 18px; font-weight: bold; color: #555; letter-spacing: 1px;">{title}</div>'
@@ -35,7 +42,7 @@ def get_table_html(title, data_list):
         html += '</div></div>'
         return html
 
-    # --- 戰術頁籤外框設計 (消除縮排陷阱) ---
+    # --- 戰術頁籤外框設計 ---
     html = '<div style="margin-bottom: 30px;">'
     html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #fff; border: 2px solid #222; border-bottom: none; border-radius: 8px 16px 0 0; padding: 6px 20px; font-size: 1.1em; font-weight: 900; color: #111; letter-spacing: 1px; box-shadow: 2px -2px 0px rgba(0,0,0,0.05);">{title}</div>'
     html += '<div style="position: relative; z-index: 1; border: 2px solid #222; border-radius: 0 8px 8px 8px; background-color: #fff; padding: 0; overflow: hidden; box-shadow: 5px 5px 0px rgba(0,0,0,0.15);">'
