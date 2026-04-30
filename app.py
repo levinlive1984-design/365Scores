@@ -2,10 +2,16 @@ import streamlit as st
 import time
 from datetime import datetime
 import pytz
+
+# --- 核心模組匯入 ---
 from api365_utils import get_365_scoreboard
+from ui_renderer import setup_cyber_css, get_table_html
 
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide", initial_sidebar_state="expanded")
 tw_tz = pytz.timezone('Asia/Taipei')
+
+# 載入賽博視覺與防殘影 CSS
+setup_cyber_css()
 
 # 狀態記憶初始化
 default_toggles = {'toggle_nba':True, 'toggle_mlb':True, 'toggle_npb':False, 'toggle_kbo':False, 'toggle_tennis':False, 'toggle_nhl':False}
@@ -40,56 +46,7 @@ with st.sidebar:
     st.divider()
     st.button("🔴 緊急重置看板", on_click=emergency_reset)
 
-
-def get_table_html(title, data_list):
-    html = f"### {title}\n"
-    if not data_list: return html + "該日期暫無賽事數據。"
-
-    table_html = "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 25px;'>"
-    table_html += "<thead><tr style='background-color: #f8f9fa; border-bottom: 2px solid #333;'>"
-    table_html += "<th style='text-align: left; padding: 12px; width: 15%;'>時間</th>"
-    table_html += "<th style='text-align: left; padding: 12px; width: 20%;'>狀態</th>"
-    table_html += "<th style='text-align: left; padding: 12px; width: 45%;'>對戰組合</th>"
-    table_html += "<th style='text-align: left; padding: 12px; width: 20%;'>比分</th>"
-    table_html += "</tr></thead><tbody>"
-    
-    current_league = None
-    for row in data_list:
-        if row['League'] != current_league:
-            current_league = row['League']
-            table_html += f"<tr style='background-color: #ececec; font-weight: bold; color: #333;'>"
-            table_html += f"<td colspan='4' style='padding: 8px 12px; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;'>{current_league}</td></tr>"
-
-        status_style = f"color: #dc3545; font-weight: bold;" if row['State'] == 'in' else ""
-        status_box = f"<span style='background-color: #e9ecef; color: #6c757d; padding: 4px 8px; border-radius: 4px;'>{row['Status']}</span>" if row['State'] == 'post' else row['Status']
-            
-        table_html += f"<tr style='border-bottom: 1px solid #dee2e6;'>"
-        table_html += f"<td style='padding: 12px;'>{row['Time']}</td>"
-        table_html += f"<td style='padding: 12px; {status_style}'>{status_box}</td>"
-        table_html += f"<td style='padding: 12px;'>{row['Away']} <span style='color: red; font-weight: bold;'>vs</span> {row['Home']}</td>"
-        table_html += f"<td style='padding: 12px; font-weight: bold;'>{row['Score']}</td></tr>"
-    
-    return html + table_html + "</tbody></table>"
-
-# --- 注入 CSS 視覺抹除術 ---
-st.markdown("""
-    <style>
-        .block-container { padding-top: 1rem !important; } 
-        .update-timestamp { font-family: monospace; color: #00FF00; background: #000; padding: 2px 8px; border-radius: 4px; }
-        
-        /* 1. 攔截 Streamlit 的過期元素 (stale)，將預設的半透明改為完全隱藏 */
-        [data-stale="true"] {
-            opacity: 0 !important;
-            display: none !important;
-        }
-        
-        /* 2. 拔除區塊的漸變轉場動畫，強制達到「光速切換」 */
-        div[data-testid="stVerticalBlock"] {
-            transition: opacity 0s !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
+# --- 主戰情螢幕渲染 ---
 st.markdown(f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {datetime.now(tw_tz).strftime('%H:%M:%S')}</span>", unsafe_allow_html=True)
 
 if active_leagues:
@@ -97,7 +54,10 @@ if active_leagues:
     for i, league in enumerate(active_leagues):
         with cols[i % len(cols)]:
             icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
-            st.markdown(get_table_html(f"{icon} {league}", get_365_scoreboard(league.lower().split(' ')[0], selected_date)), unsafe_allow_html=True)
+            
+            # 呼叫外部的 get_table_html 來套用頁籤設計
+            html_content = get_table_html(f"{icon} {league}", get_365_scoreboard(league.lower().split(' ')[0], selected_date))
+            st.markdown(html_content, unsafe_allow_html=True)
 else:
     st.warning("📡 請由左側面板啟動賽事數據鏈路...")
 
