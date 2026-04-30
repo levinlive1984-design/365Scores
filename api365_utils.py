@@ -27,7 +27,15 @@ def get_365_scoreboard(league_type, target_date):
         parsed_data = []
         
         for game in games:
-            game_id = game.get('id')
+            # 🎯 核心修正：偵測是否為系列賽容器 (季後賽常態)
+            # 如果 game 物件下面還有一個 'games' 列表，代表它是系列賽，我們要抓子層的 ID
+            inner_games = game.get('games', [])
+            if inner_games:
+                # 優先抓取當前的子比賽 ID，如果沒有則抓第一個
+                actual_game_id = inner_games[0].get('id')
+            else:
+                actual_game_id = game.get('id')
+
             sport_id = game.get('sportId')
             
             if league_type == 'tennis':
@@ -51,16 +59,10 @@ def get_365_scoreboard(league_type, target_date):
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
             
-            extra_score = ""
-            if sport_id == 3 and state == 'in':
-                for stage in game.get('stages', []):
-                    if stage.get('id') == 34:
-                        extra_score = f" ({int(away.get('score', 0))}:{int(home.get('score', 0))})"
-            
-            score_display = f"{int(away.get('score', 0))} - {int(home.get('score', 0))}{extra_score}" if state != 'pre' else "-"
+            score_display = f"{int(away.get('score', 0))} - {int(home.get('score', 0))}" if state != 'pre' else "-"
 
-            # 🎯 終極修正：使用 365Scores 萬用跳轉網址，並使用 .strip() 確保絕對沒有空格
-            match_url = f"https://www.365scores.com/game/{game_id}".strip()
+            # 🎯 建立最穩定的「真．比賽跳轉網址」
+            match_url = f"https://www.365scores.com/zh-tw/game/{actual_game_id}"
 
             parsed_data.append({
                 "League": league_display_name,
