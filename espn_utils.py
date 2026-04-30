@@ -33,6 +33,8 @@ def get_espn_scoreboard(sport, league, target_date):
         status_obj = ev['status']['type']
         state = status_obj['state']
         status_text = "已結束" if state == 'post' else ("進行中" if state == 'in' else "預計")
+        
+        # 若是進行中，顯示詳細進度（如 Top 9th）
         if state == 'in' and 'detail' in status_obj:
             status_text = status_obj['detail']
 
@@ -40,7 +42,7 @@ def get_espn_scoreboard(sport, league, target_date):
         away = comp['competitors'][0]['team']['displayName']
         home = comp['competitors'][1]['team']['displayName']
         
-        # 封裝 HTML 結構以實現顏色要求
+        # 建立 Match HTML
         vs_html = f"{away} <span style='color:red; font-weight:bold;'>vs</span> {home}"
         
         parsed_data.append({
