@@ -29,12 +29,12 @@ with st.sidebar:
     st.markdown("### 🔌 模組撥桿 (Toggle)")
     
     # 移除了容易引發衝突的 on_change，讓 Streamlit 原生接管狀態改變
-    show_nba = st.toggle("🏀 NBA 數據鏈路", key='toggle_nba')
-    show_mlb = st.toggle("⚾ MLB 數據鏈路", key='toggle_mlb')
-    show_nhl = st.toggle("🏒 NHL 冰球鏈路", key='toggle_nhl')
-    show_npb = st.toggle("⚾ NPB 日職模組", key='toggle_npb')
-    show_kbo = st.toggle("⚾ KBO 韓職模組", key='toggle_kbo')
-    show_tennis = st.toggle("🎾 Tennis 網球監控", key='toggle_tennis')
+    show_nba = st.toggle("🏀 NBA", key='toggle_nba')
+    show_mlb = st.toggle("⚾ MLB", key='toggle_mlb')
+    show_nhl = st.toggle("🏒 NHL", key='toggle_nhl')
+    show_npb = st.toggle("⚾ NPB", key='toggle_npb')
+    show_kbo = st.toggle("⚾ KBO", key='toggle_kbo')
+    show_tennis = st.toggle("🎾 Tennis", key='toggle_tennis')
     
     active_leagues = [L for L, S in zip(
         ["NBA", "MLB", "NHL", "NPB", "KBO", "Tennis"], 
@@ -42,7 +42,7 @@ with st.sidebar:
     ) if S]
     
     st.divider()
-    st.button("🔴 緊急重置看板", on_click=emergency_reset)
+    st.button("緊急重置看板", on_click=emergency_reset)
 
 st.markdown(f"⏱️ <span class='update-timestamp'>SYSTEM_LIVE: {datetime.now(tw_tz).strftime('%H:%M:%S')}</span>", unsafe_allow_html=True)
 
