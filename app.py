@@ -3,19 +3,16 @@ from datetime import datetime
 import pytz
 from espn_utils import get_espn_scoreboard
 
-# 必須放在第一行
+# 系統配置
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 側邊欄：集中所有控制與標題，徹底釋放主畫面空間 ---
+# --- 側邊欄：極簡控制 ---
 with st.sidebar:
-    st.markdown("## 🏆 體育戰情監控中心")
-    st.divider()
-    st.markdown("### 📅 賽事管理")
-    selected_date = st.date_input("調閱賽事日期 (台灣時間)", datetime.now(tw_tz).date())
-    st.success(f"📊 目前顯示：\n**{selected_date.strftime('%Y-%m-%d')}**\n(全日台灣時間)")
+    st.markdown("## 🏆 體育戰情監控")
+    selected_date = st.date_input("調閱日期", datetime.now(tw_tz).date())
 
-# --- 強制 HTML 渲染引擎 (保持穩定代碼) ---
+# --- 強制 HTML 渲染引擎 ---
 def render_html_table(data_list):
     if not data_list:
         st.write("該日期暫無賽事數據。")
@@ -51,21 +48,13 @@ def render_html_table(data_list):
         html += "</tr>"
         
     html += "</tbody></table>"
-    
     st.markdown(html, unsafe_allow_html=True)
 
-# --- 主畫面：直接從數據雙欄位開始 ---
-
-# 空間最佳化：強制隱藏 Streamlit 預設的頂部白邊
+# --- 主畫面空間優化 ---
 st.markdown("""
     <style>
-        .block-container {
-            padding-top: 2rem !important; 
-            padding-bottom: 0rem !important;
-        }
-        header {
-            visibility: hidden;
-        }
+        .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
+        header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
