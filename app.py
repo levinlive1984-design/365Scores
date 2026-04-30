@@ -12,15 +12,13 @@ st.set_page_config(
 )
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# --- 狀態初始化 (Session State) ---
-# 這是真正的重置關鍵：設定每個開關的「靈魂記憶」
+# --- 狀態初始化 ---
 if 'toggle_nba' not in st.session_state: st.session_state.toggle_nba = True
 if 'toggle_mlb' not in st.session_state: st.session_state.toggle_mlb = True
 if 'toggle_npb' not in st.session_state: st.session_state.toggle_npb = False
 if 'toggle_kbo' not in st.session_state: st.session_state.toggle_kbo = False
 if 'toggle_tennis' not in st.session_state: st.session_state.toggle_tennis = False
 
-# 定義真正的「緊急重置」功能
 def emergency_reset():
     st.session_state.toggle_nba = True
     st.session_state.toggle_mlb = True
@@ -36,7 +34,6 @@ with st.sidebar:
     
     st.markdown("### 🔌 模組撥桿 (Toggle)")
     
-    # 將開關與 Session State 綁定
     show_nba = st.toggle("🏀 NBA 數據鏈路", key='toggle_nba')
     show_mlb = st.toggle("⚾ MLB 數據鏈路", key='toggle_mlb')
     show_npb = st.toggle("⚾ NPB 日職模組", key='toggle_npb')
@@ -51,8 +48,6 @@ with st.sidebar:
     if show_tennis: active_leagues.append("Tennis")
 
     st.divider()
-    
-    # 掛載真正的重置功能 (on_click)
     st.button("🔴 緊急重置看板", on_click=emergency_reset, help="將所有模組恢復至預設狀態 (僅開啟 NBA 與 MLB)")
 
 # --- 頁面主體預留區 ---
@@ -118,7 +113,7 @@ with main_container.container():
                 elif league == "NPB":
                     st.markdown(get_table_html("⚾ NPB (日職)", get_365_scoreboard('npb', selected_date)), unsafe_allow_html=True)
                 elif league == "KBO":
-                    st.markdown("### ⚾ KBO (韓職)\n*(等待 ID 接入)*")
+                    st.markdown(get_table_html("⚾ KBO (韓職)", get_365_scoreboard('kbo', selected_date)), unsafe_allow_html=True)
                 elif league == "Tennis":
                     st.markdown("### 🎾 Tennis (網球)\n*(等待 ID 接入)*")
     else:
