@@ -1,7 +1,14 @@
 import streamlit as st
 from datetime import datetime
 import pytz
-from streamlit_autorefresh import st_autorefresh
+try:
+    from streamlit_autorefresh import st_autorefresh
+except ModuleNotFoundError:
+    # fallback for environments without the extra package
+    def st_autorefresh(interval=10000, key=None):
+        import time
+        time.sleep(interval / 1000)
+        st.rerun()
 
 # --- 核心模組匯入 ---
 from api365_utils import get_365_scoreboard
