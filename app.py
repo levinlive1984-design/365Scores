@@ -3,23 +3,24 @@ from datetime import datetime
 import pytz
 from espn_utils import get_espn_scoreboard
 
+# 必須放在第一行
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
+# --- 側邊欄：集中所有控制與標題，徹底釋放主畫面空間 ---
 with st.sidebar:
+    st.markdown("## 🏆 體育戰情監控中心")
+    st.divider()
     st.markdown("### 📅 賽事管理")
     selected_date = st.date_input("調閱賽事日期 (台灣時間)", datetime.now(tw_tz).date())
-    st.divider()
+    st.success(f"📊 目前顯示：\n**{selected_date.strftime('%Y-%m-%d')}**\n(全日台灣時間)")
 
-st.title("🏆 體育戰情即時監控中心")
-st.success(f"📊 目前顯示：**{selected_date.strftime('%Y-%m-%d')}** (全日台灣時間賽程)")
-
+# --- 強制 HTML 渲染引擎 (保持穩定代碼) ---
 def render_html_table(data_list):
     if not data_list:
         st.write("該日期暫無賽事數據。")
         return
 
-    # 徹底移除縮排，強制以純 HTML 渲染，防堵 Markdown 誤判
     html = ""
     html += "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif; margin-bottom: 20px;'>"
     html += "<thead>"
@@ -33,7 +34,6 @@ def render_html_table(data_list):
     html += "<tbody>"
     
     for row in data_list:
-        # 狀態處理
         if row['State'] == 'post':
             status_html = f"<span style='background-color: #e9ecef; color: #6c757d; padding: 4px 8px; border-radius: 4px; font-size: 0.9em;'>{row['Status']}</span>"
         elif row['State'] == 'in':
@@ -41,7 +41,6 @@ def render_html_table(data_list):
         else:
             status_html = row['Status']
             
-        # 對戰組合處理 (vs 紅字)
         match_html = f"{row['Away']} <span style='color: red; font-weight: bold; margin: 0 5px;'>vs</span> {row['Home']}"
             
         html += "<tr style='border-bottom: 1px solid #dee2e6;'>"
@@ -55,7 +54,21 @@ def render_html_table(data_list):
     
     st.markdown(html, unsafe_allow_html=True)
 
-st.divider()
+# --- 主畫面：直接從數據雙欄位開始 ---
+
+# 空間最佳化：強制隱藏 Streamlit 預設的頂部白邊
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 2rem !important; 
+            padding-bottom: 0rem !important;
+        }
+        header {
+            visibility: hidden;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
 col_nba, col_mlb = st.columns(2)
 
 with col_nba:
