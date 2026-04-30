@@ -3,8 +3,9 @@ from datetime import datetime
 
 def get_365_scoreboard(league_type, target_date):
     date_str = target_date.strftime('%d/%m/%Y')
+    target_date_iso = target_date.strftime('%Y-%m-%d')
     
-    # 1. API 路由設定 (維持原樣)
+    # 1. API 路由設定
     if league_type == 'tennis':
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true&withTop=true&onlyMajorGames=true"
     else:
@@ -12,7 +13,7 @@ def get_365_scoreboard(league_type, target_date):
         comp_id = comp_map.get(league_type, 103)
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&competitions={comp_id}&startDate={date_str}&endDate={date_str}&showOdds=true"
     
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     
     try:
         res = requests.get(url, headers=headers, timeout=10).json()
@@ -20,35 +21,38 @@ def get_365_scoreboard(league_type, target_date):
         parsed_data = []
         
         for game in games:
-            # 🎯 核心修正：尋找「真正的單場比賽 ID」
-            # 優先檢查 gameId，如果是系列賽，則從內層 games 列表抓取當天比賽的 ID
-            actual_id = None
-            inner_games = game.get('games', [])
+            # 🎯 核心修復：精準獵殺「單場 ID」
+            actual_game_id = None
             
+            # 季後賽模式：比賽會嵌套在 'games' 列表內
+            inner_games = game.get('games', [])
             if inner_games:
-                # 遍歷子比賽，找到與當前 target_date 相符的那一場
                 for ig in inner_games:
-                    ig_date = ig.get('startTime', '')[:10]
-                    if target_date.strftime('%Y-%m-%d') in ig_date:
-                        actual_id = ig.get('id')
+                    # 檢查這場子比賽的日期是否為我們選擇的 target_date
+                    if target_date_iso in ig.get('startTime', ''):
+                        actual_game_id = ig.get('id')
                         break
-                # 如果找不到對應日期的，則取第一個 (保險措施)
-                if not actual_id: actual_id = inner_games[0].get('id')
+                # 如果日期匹配失敗，退而求其次抓第一個
+                if not actual_game_id: actual_game_id = inner_games[0].get('id')
             else:
-                actual_id = game.get('gameId') or game.get('id')
+                # 常規賽模式：直接使用頂層 ID 或 gameId
+                actual_game_id = game.get('gameId') or game.get('id')
 
-            # 💡 如果拿到的還是系列賽 ID (如 4703560)，365Scores 的 API 有時會把真正的 ID 藏在 'gameId' 欄位
-            # 這個邏輯能確保我們拿到的絕對是單場 ID (如 4703600)
+            # 抓取運動種類路徑 (用於連結跳轉)
+            sport_id = game.get('sportId')
+            sport_path_map = {1: 'football', 2: 'basketball', 3: 'tennis', 4: 'hockey'}
+            sport_path = sport_path_map.get(sport_id, 'football')
 
-            # --- 後續邏輯維持不變 ---
+            # --- 數據解析 ---
             status_group = game.get('statusGroup', 1)
             state = 'post' if status_group == 4 else ('in' if status_group == 3 else 'pre')
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
             score = f"{int(away.get('score', 0))} - {int(home.get('score', 0))}" if state != 'pre' else "-"
 
-            # 🎯 建立自動轉向連結：只要 ID 對了，它就會跳轉到你想要的長網址
-            match_url = f"https://www.365scores.com/zh-tw/game/{actual_id}"
+            # 🎯 建立「終極跳轉網址」：使用單場 ID 配合 redirect 模式
+            # 只要這個 ID 是 4703600，365Scores 就會自動帶你去正確的詳情頁
+            match_url = f"https://www.365scores.com/zh-tw/match/redirect#id={actual_game_id}"
 
             parsed_data.append({
                 "League": game.get('competitionDisplayName', ''),
