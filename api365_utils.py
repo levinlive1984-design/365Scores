@@ -8,7 +8,9 @@ def get_365_scoreboard(league_type, target_date):
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&sports=3&startDate={date_str}&endDate={date_str}&showOdds=true"
     else:
         comp_map = {'nba': 103, 'mlb': 438, 'npb': 5482, 'kbo': 7587, 'nhl': 366}
-        comp_id = comp_map.get(league_type, 103)
+        comp_id = comp_map.get(league_type)
+        if comp_id is None:
+            return []  # 未知聯賽，明確回傳空清單，不亂顯示假資料
         url = f"https://webws.365scores.com/web/games/allscores/?appTypeId=5&langId=199&timezoneName=Asia%2FTaipei&userCountryId=163&competitions={comp_id}&startDate={date_str}&endDate={date_str}&showOdds=true"
     
     headers = {
