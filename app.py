@@ -2,55 +2,52 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import pytz
-# 導入我們建立的模組
 from espn_utils import get_espn_scoreboard
 
 # --- 戰情系統初始化 ---
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# 側邊欄資產監控
+# --- 側邊欄：基礎資訊 ---
 st.sidebar.markdown(f"### 🛡️ 戰情系統 2.0")
 st.sidebar.markdown(f"**當前資產：** 853 元")
-st.sidebar.markdown(f"**系統時區：** Asia/Taipei")
-st.sidebar.markdown(f"**更新時間：** {datetime.now(tw_tz).strftime('%H:%M:%S')}")
+st.sidebar.markdown(f"**策略版本：** V5.0 (Cross-ball)")
 
+# --- 主頁面日期選擇區 ---
 st.title("🏆 體育戰情即時監控中心")
 
-# --- 第一區：穩定抓取區 (NBA & MLB) ---
-st.subheader("✅ 穩定數據源 (ESPN)")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("#### 🏀 NBA")
-    nba_list = get_espn_scoreboard('basketball', 'nba')
-    if nba_list:
-        st.table(pd.DataFrame(nba_list).sort_values(by="Time"))
-    else:
-        st.info("目前無 NBA 賽事")
-
-with col2:
-    st.markdown("#### ⚾ MLB")
-    mlb_list = get_espn_scoreboard('baseball', 'mlb')
-    if mlb_list:
-        st.table(pd.DataFrame(mlb_list).sort_values(by="Time"))
-    else:
-        st.info("目前無 MLB 賽事")
+# 將日期選擇器放在主頁面頂部，確保 100% 可見
+selected_date = st.date_input("📅 請選擇欲調閱的賽事日期", datetime.now(tw_tz).date())
+st.success(f"🔍 目前調閱日期：**{selected_date.strftime('%Y-%m-%d')}**")
 
 st.divider()
 
-# --- 第二區：研究開發區 (日本職棒 & 網球) ---
+# --- 穩定數據區 (NBA & MLB) ---
+col_nba, col_mlb = st.columns(2)
+
+with col_nba:
+    st.markdown("#### 🏀 NBA")
+    nba = get_espn_scoreboard('basketball', 'nba', selected_date)
+    if nba:
+        st.table(pd.DataFrame(nba).sort_values(by="Time"))
+    else:
+        st.write("該日期暫無 NBA 數據。")
+
+with col_mlb:
+    st.markdown("#### ⚾ MLB")
+    mlb = get_espn_scoreboard('baseball', 'mlb', selected_date)
+    if mlb:
+        st.table(pd.DataFrame(mlb).sort_values(by="Time"))
+    else:
+        st.write("該日期暫無 MLB 數據。")
+
+# --- 研究開發區 ---
+st.divider()
 st.subheader("🧪 數據抓取研究區 (NPB & Tennis)")
+t_npb, t_tennis = st.tabs(["⚾ 日本職棒 (NPB)", "🎾 網球 (Tennis)"])
 
-# 這裡我們接下來要填入新的爬蟲邏輯
-tab1, tab2 = st.tabs(["⚾ 日本職棒 (NPB)", "🎾 網球 (Tennis)"])
+with t_npb:
+    st.write("正在開發對接 TheScore API，解決日本職棒數據涵蓋問題...")
 
-with tab1:
-    st.write("🔍 正在研究 NPB 穩定抓取方案...")
-    # 預留顯示區
-    st.info("目前 NPB 數據抓取測試中，尚未對接。")
-
-with tab2:
-    st.write("🔍 正在研究 網球 (ATP/WTA) 全場次抓取方案...")
-    st.info("目前網球數據抓取測試中，尚未對接。")
+with t_tennis:
+    st.write("正在開發全場次網球解析器...")
