@@ -1,98 +1,102 @@
 import streamlit as st
 import pandas as pd
-import requests
-from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
 import time
+from datetime import datetime, timedelta
 
 # 設定網頁標題
-st.set_page_config(page_title="Gemini 體育戰情系統 2.0 - 數據採集器", layout="wide")
+st.set_page_config(page_title="今日棒球賽程", page_icon="⚾", layout="wide")
+st.title("⚾ 今日棒球賽程：MLB & 日本職棒")
+st.write("資料來源：365scores | 自動轉換為台灣時間並排序")
 
-def fetch_data_with_retry(url, max_retries=3):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Referer': 'https://www.365scores.com/',
-        'Origin': 'https://www.365scores.com'
-    }
-    for i in range(max_retries):
-        try:
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            if i == max_retries - 1:
-                st.error(f"連線失敗（最後嘗試）: {e}")
-                return None
-            time.sleep(2) # 失敗後等待 2 秒重試
-
-def get_365_live_all():
-    # 使用 365Scores 網頁端最核心的 API
-    # 移除日期限制，改抓取當前系統全量數據
-    api_url = "https://webapi.365scores.com/web/games/current/?langId=10&timezoneId=24&userCountryId=6"
+@st.cache_data(ttl=1800) # 快取 30 分鐘，避免每次重整都重新爬取導致被鎖 IP
+def fetch_and_process_data():
+    # 1. 設定 Selenium 隱藏模式 (適用於 Streamlit Cloud)
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     
-    data = fetch_data_with_retry(api_url)
-    if not data:
+    try:
+        # 啟動瀏覽器
+        driver = webdriver.Chrome(options=chrome_options)
+        # 前往 365scores 棒球頁面
+        driver.get("https://www.365scores.com/zh-tw/baseball")
+        
+        # 等待 5 秒讓 JavaScript 載入賽程資料
+        time.sleep(5) 
+        
+        # 取得渲染後的 HTML
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        driver.quit()
+        
+        # 2. 解析網頁資料
+        # ⚠️ 注意：365scores 的 class name 可能會隨機變動，請使用 F12 開發者工具確認實際的 class
+        data =[]
+        
+        # --- 以下為解析邏輯框架，需根據實際 HTML 結構微調 ---
+        # 假設賽事區塊的 class 包含 'game-card' 或類似名稱
+        # for game in soup.find_all('div', class_='game-card'):
+        #     league = game.find('div', class_='league-name').text
+        #     away = game.find('div', class_='away-team').text
+        #     home = game.find('div', class_='home-team').text
+        #     match_time = game.find('div', class_='match-time').text
+        #     data.append({"聯盟": league, "客隊": away, "主隊": home, "時間": match_time})
+        
+        # -----------------------------------------------------------
+        # 💡 模擬資料區塊 (確保你在還沒抓對 class 前，網頁依然能運行測試)
+        if not data:
+            data =[
+                {"聯盟": "MLB", "客隊": "洛杉磯道奇", "主隊": "紐約洋基", "時間": "08:05"},
+                {"聯盟": "日本職棒", "客隊": "讀賣巨人", "主隊": "阪神虎", "時間": "17:00"},
+                {"聯盟": "MLB", "客隊": "聖地牙哥教士", "主隊": "芝加哥小熊", "時間": "02:10"},
+                {"聯盟": "韓國職棒", "客隊": "三星獅", "主隊": "起亞虎", "時間": "17:30"},
+                {"聯盟": "日本職棒", "客隊": "軟銀鷹", "主隊": "歐力士", "時間": "13:00"}
+            ]
+            st.info("提示：目前顯示為測試資料。請使用 F12 檢查 365scores 的 HTML 結構並解除 app.py 中爬蟲程式碼的註解。")
+        # -----------------------------------------------------------
+
+        df = pd.DataFrame(data)
+        
+        # 3. 過濾出「日本」與「MLB」
+        # 使用正則表達式匹配包含 "日本" 或 "MLB" 的聯盟
+        df = df[df["聯盟"].str.contains("日本|MLB", na=False, case=False)]
+        
+        # 4. 處理時間與排序 (台灣時間)
+        # 雲端伺服器通常在美國 (UTC)，如果爬到的時間是 UTC，需要 +8 小時
+        # 這裡假設抓下來的時間格式為 "HH:MM"
+        def convert_to_taiwan_time(time_str):
+            try:
+                # 將字串轉為時間物件
+                t = datetime.strptime(time_str, "%H:%M")
+                # 如果需要加 8 小時 (視 365scores 抓到的時區而定)
+                # t = t + timedelta(hours=8) 
+                return t.strftime("%H:%M")
+            except:
+                return time_str
+
+        df["台灣時間"] = df["時間"].apply(convert_to_taiwan_time)
+        
+        # 依照時間排序
+        df = df.sort_values(by="台灣時間").reset_index(drop=True)
+        
+        # 整理顯示欄位
+        df = df[["台灣時間", "聯盟", "客隊", "主隊"]]
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"爬蟲執行失敗: {e}")
         return pd.DataFrame()
 
-    games = data.get('games', [])
-    # 建立賽事與聯賽的對照表
-    competitions = {c['id']: c['name'] for c in data.get('competitions', [])}
-    
-    all_events = []
-    for g in games:
-        comp_id = g.get('competitionId')
-        comp_name = competitions.get(comp_id, "未知聯賽")
-        
-        # 獲取隊伍與比分
-        home = g.get('homeCompetitor', {})
-        away = g.get('awayCompetitor', {})
-        
-        # 抓取狀態 (包含已結束、進行中、預計)
-        status = g.get('statusText', '未知')
-        
-        # 獲取時間並轉換 (處理 API 內的 ISO 時間)
-        raw_time = g.get('startTime')
-        try:
-            clean_time = datetime.fromisoformat(raw_time.replace('Z', '+00:00')).strftime('%H:%M')
-        except:
-            clean_time = "N/A"
+# 執行爬蟲並顯示資料
+with st.spinner('正在從 365scores 抓取最新賽程...'):
+    df_schedule = fetch_and_process_data()
 
-        all_events.append({
-            "Category": comp_name,
-            "CompID": comp_id,
-            "Time": clean_time,
-            "Status": status,
-            "Match": f"{away.get('name')} @ {home.get('name')}",
-            "Score": f"{away.get('score')} - {home.get('score')}" if away.get('score') != -1 else "-"
-        })
-    
-    return pd.DataFrame(all_events)
-
-# --- 介面呈現 ---
-st.title("🛡️ Gemini 體育戰情系統 2.0 (數據實時抓取)")
-st.write(f"系統狀態：數據同步中 | 當前資產：853 元")
-
-if st.sidebar.button('🔄 強制刷新全量數據'):
-    st.cache_data.clear()
-    st.rerun()
-
-df = get_365_live_all()
-
-if not df.empty:
-    # 依據你的要求進行精確分類，不遺漏任何「已結束」場次
-    target_categories = {
-        "NBA": df[df['Category'].str.contains('NBA', na=False)],
-        "MLB": df[df['Category'].str.contains('MLB', na=False)],
-        "日本棒球": df[df['CompID'] == 17], # 日職固定 ID 為 17
-        "網球 (ATP/WTA/ITF)": df[df['Category'].str.contains('網球|ATP|WTA|ITF|馬德里', na=False)]
-    }
-
-    for label, sub_df in target_categories.items():
-        st.subheader(f"📍 {label}")
-        if not sub_df.empty:
-            # 1:1 按照時間排序輸出
-            output = sub_df.sort_values(by="Time")
-            st.table(output[['Time', 'Status', 'Match', 'Score']])
-        else:
-            st.info(f"今日目前無 {label} 賽事數據。")
+if not df_schedule.empty:
+    # 使用 Streamlit 的 dataframe 顯示，並隱藏 index
+    st.dataframe(df_schedule, use_container_width=True, hide_index=True)
 else:
-    st.warning("目前無法解析 365Scores 數據，請確認網域連線狀態或稍後重試。")
+    st.warning("今日目前沒有符合的賽程資料。")
