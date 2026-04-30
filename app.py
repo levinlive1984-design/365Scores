@@ -7,25 +7,33 @@ from api365_utils import get_365_scoreboard
 st.set_page_config(page_title="Gemini 體育戰情系統 2.0", layout="wide", initial_sidebar_state="expanded")
 tw_tz = pytz.timezone('Asia/Taipei')
 
-# 狀態記憶
-for key, val in {'toggle_nba':True, 'toggle_mlb':True, 'toggle_npb':False, 'toggle_kbo':False, 'toggle_tennis':False}.items():
+# 狀態記憶 (新增 NHL)
+for key, val in {'toggle_nba':True, 'toggle_mlb':True, 'toggle_npb':False, 'toggle_kbo':False, 'toggle_tennis':False, 'toggle_nhl':False}.items():
     if key not in st.session_state: st.session_state[key] = val
 
 def emergency_reset():
     for key in ['toggle_nba', 'toggle_mlb']: st.session_state[key] = True
-    for key in ['toggle_npb', 'toggle_kbo', 'toggle_tennis']: st.session_state[key] = False
+    for key in ['toggle_npb', 'toggle_kbo', 'toggle_tennis', 'toggle_nhl']: st.session_state[key] = False
 
 with st.sidebar:
     st.markdown("## 🛰️ 戰情調度中心")
     selected_date = st.date_input("🗓️ 調閱日期", datetime.now(tw_tz).date())
     st.divider()
     st.markdown("### 🔌 模組撥桿 (Toggle)")
+    
     show_nba = st.toggle("🏀 NBA 數據鏈路", key='toggle_nba')
     show_mlb = st.toggle("⚾ MLB 數據鏈路", key='toggle_mlb')
+    show_nhl = st.toggle("🏒 NHL 冰球鏈路", key='toggle_nhl')
     show_npb = st.toggle("⚾ NPB 日職模組", key='toggle_npb')
     show_kbo = st.toggle("⚾ KBO 韓職模組", key='toggle_kbo')
     show_tennis = st.toggle("🎾 Tennis 網球監控", key='toggle_tennis')
-    active_leagues = [L for L, S in zip(["NBA","MLB","NPB","KBO","Tennis"], [show_nba, show_mlb, show_npb, show_kbo, show_tennis]) if S]
+    
+    # 動態陣列
+    active_leagues = [L for L, S in zip(
+        ["NBA", "MLB", "NHL", "NPB", "KBO", "Tennis"], 
+        [show_nba, show_mlb, show_nhl, show_npb, show_kbo, show_tennis]
+    ) if S]
+    
     st.divider()
     st.button("🔴 緊急重置看板", on_click=emergency_reset)
 
@@ -45,7 +53,6 @@ def get_table_html(title, data_list):
     
     current_league = None
     for row in data_list:
-        # 核心分組邏輯：如果聯賽名稱改變，插入分類橫桿
         if row['League'] != current_league:
             current_league = row['League']
             table_html += f"<tr style='background-color: #ececec; font-weight: bold; color: #333;'>"
@@ -70,7 +77,9 @@ with main_container.container():
         cols = st.columns(min(len(active_leagues), 3))
         for i, league in enumerate(active_leagues):
             with cols[i % len(cols)]:
-                st.markdown(get_table_html(f"{'🏀' if league=='NBA' else '🎾' if league=='Tennis' else '⚾'} {league}", get_365_scoreboard(league.lower().split(' ')[0], selected_date)), unsafe_allow_html=True)
+                # 判斷 Emoji Icon
+                icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
+                st.markdown(get_table_html(f"{icon} {league}", get_365_scoreboard(league.lower().split(' ')[0], selected_date)), unsafe_allow_html=True)
     else:
         st.warning("📡 請由左側面板啟動賽事數據鏈路...")
 
