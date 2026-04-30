@@ -1,7 +1,6 @@
 import streamlit as st
 
 def setup_cyber_css():
-    """賽博龐克視覺美學注入"""
     st.markdown("""
         <style>
             .block-container { padding-top: 1rem !important; } 
@@ -40,7 +39,6 @@ def setup_cyber_css():
     """, unsafe_allow_html=True)
 
 def get_table_html(title, data_list):
-    """生成帶有頁籤外框與絕對路徑超連結的 HTML"""
     if not data_list:
         html = '<div style="margin-bottom: 30px;">'
         html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #f8f9fa; border: 2px solid #555; border-bottom: none; border-radius: 8px 15px 0 0; padding: 6px 18px; font-weight: bold; color: #555;">{title}</div>'
@@ -67,7 +65,7 @@ def get_table_html(title, data_list):
         status_style = "color: #dc3545; font-weight: bold;" if row['State'] == 'in' else ""
         status_box = f"<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>{row['Status']}</span>" if row['State'] == 'post' else row['Status']
         
-        # 🎯 修正重點：確保 href 的引號內絕對沒有前導空格
+        # 🎯 使用 href='...' 雙引號包單引號，確保網址字串純淨
         match_link = f"<a href='{row['Url']}' target='_blank' style='text-decoration: none; color: inherit; display: block; width: 100%;'>"
         match_link += f"{row['Away']} <span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span> {row['Home']}</a>"
             
