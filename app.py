@@ -120,10 +120,10 @@ if active_leagues:
             num_games = len(data)
 
             if num_games == 0:
-                est_height = 150
+                est_height = 120
             else:
                 num_categories = len(set(r['League'] for r in data))
-                est_height = 80 + (num_games * 55) + (num_categories * 35)
+                est_height = 60 + 44 + (num_categories * 38) + (num_games * 56) + 24
 
             shortest_col_idx = col_heights.index(min(col_heights))
             col_assignments[shortest_col_idx].append(league)
