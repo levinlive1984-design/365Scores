@@ -135,5 +135,16 @@ if active_leagues:
                     icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
                     html_content = get_table_html(f"{icon} {league}", league_data[league])
                     st.markdown(html_content, unsafe_allow_html=True)
+
+                    # 複製即將開始賽程按鈕
+                    pre_rows = [r for r in league_data[league] if r.get('State') == 'pre']
+                    if pre_rows:
+                        btn_key = f"copy_{league}_{selected_date}"
+                        if st.button(f"📋 複製 {league} 即將開始賽程 ({len(pre_rows)}場)", key=btn_key):
+                            lines = []
+                            for r in pre_rows:
+                                date_str = r.get('Date', str(selected_date)[5:].replace('-', '/'))
+                                lines.append(f"{date_str} {r['Time']} {r['Away']} vs {r['Home']}")
+                            st.code("\n".join(lines), language=None)
 else:
     st.warning("📡 請由左側面板啟動賽事數據鏈路...")
