@@ -144,8 +144,12 @@ def get_365_scoreboard(league_type, target_date):
             else:
                 serving = ''
 
+            # 日期格式：M/D，例如 5/2
+            date_display = target_date.strftime('%-m/%-d') if hasattr(target_date, 'strftime') else str(target_date)
+
             parsed_data.append({
                 "League": league_display_name,
+                "Date": date_display,
                 "Time": time_display,
                 "Status": status_text,
                 "State": state,
