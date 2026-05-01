@@ -11,11 +11,7 @@ def setup_cyber_css():
                 padding: 1rem 0.7rem 1rem 0.7rem !important;
             }
 
-            [data-testid="stSidebar"] {
-                min-width: 0px !important;
-                max-width: 160px !important;
-                width: 160px !important;
-            }
+            
 
             /* 標題縮小 */
             [data-testid="stSidebar"] h2 {
