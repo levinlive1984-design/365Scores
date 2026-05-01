@@ -135,7 +135,7 @@ if active_leagues:
                 for league in col_assignments[i]:
                     icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
                     html_content, est_height = get_table_html(f"{icon} {league}", league_data[league])
-                    components.html(html_content, height=est_height, scrolling=False)
+                    components.html(html_content, height=est_height, scrolling=True)
 
                     # 舊的 st.button 複製邏輯已移除，複製按鈕已內嵌於頁籤中
 else:
