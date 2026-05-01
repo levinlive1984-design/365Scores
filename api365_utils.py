@@ -133,6 +133,17 @@ def get_365_scoreboard(league_type, target_date):
             else:
                 match_url = _build_match_url(league_type, comp_id, away, home, game_id)
 
+            # 網球發球方：inPossession=True 代表正在發球
+            if league_type == 'tennis' and state == 'in':
+                if home.get('inPossession'):
+                    serving = 'home'
+                elif away.get('inPossession'):
+                    serving = 'away'
+                else:
+                    serving = ''
+            else:
+                serving = ''
+
             parsed_data.append({
                 "League": league_display_name,
                 "Time": time_display,
@@ -140,6 +151,7 @@ def get_365_scoreboard(league_type, target_date):
                 "State": state,
                 "Away": away.get('name', 'TBD'),
                 "Home": home.get('name', 'TBD'),
+                "Serving": serving,
                 "Score": f"{int(away.get('score', 0))} - {int(home.get('score', 0))}{extra_score}" if state != 'pre' else "-",
                 "URL": match_url
             })
