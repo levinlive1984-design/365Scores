@@ -121,38 +121,45 @@ def setup_cyber_css():
         </style>
     """, unsafe_allow_html=True)
 
-def get_table_html(title, data_list, selected_date=None):
-    """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表，頁籤右側附 📋 複製即將開始賽程按鈕"""
-    import re as _re
+def get_copy_button_html(league, pre_rows):
+    """用 components.html 渲染的複製按鈕 HTML（跳脫 Streamlit markdown 沙盒限制）"""
+    if not pre_rows:
+        return None
+    lines = []
+    for r in pre_rows:
+        lines.append(f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}")
+    # 用 JSON 傳資料，避免反引號/換行逃脫問題
+    import json
+    copy_text_json = json.dumps("\n".join(lines))
+    btn_id = f"cpbtn_{league}"
+    return f"""
+    <button id="{btn_id}"
+        style="background:#f8f9fa;color:#333;border:2px solid #222;border-radius:5px;
+               box-shadow:2px 2px 0px #111;padding:4px 12px;font-size:13px;
+               cursor:pointer;font-family:monospace;font-weight:700;
+               transition:all 0.1s ease;"
+        onclick="(function(){{
+            var text = {copy_text_json};
+            navigator.clipboard.writeText(text).then(function(){{
+                var b = document.getElementById('{btn_id}');
+                b.textContent = '✅ 已複製 {len(pre_rows)} 場';
+                b.style.background = '#22c55e';
+                b.style.color = '#fff';
+                setTimeout(function(){{
+                    b.textContent = '📋 複製即將開始賽程（{len(pre_rows)} 場）';
+                    b.style.background = '#f8f9fa';
+                    b.style.color = '#333';
+                }}, 2000);
+            }});
+        }})();">
+        📋 複製即將開始賽程（{len(pre_rows)} 場）
+    </button>
+    """
 
-    # 過濾出「即將開始」的賽程，準備複製用文字
-    pre_rows = [r for r in data_list if r.get('State') == 'pre']
-    if pre_rows:
-        lines = []
-        for r in pre_rows:
-            date_str = r.get('Date', '')
-            lines.append(f"{date_str} {r['Time']} {r['Away']} vs {r['Home']}")
-        copy_text = "\\n".join(lines).replace("`", "\\`").replace("${", "\\${")
-        btn_id = "cpbtn_" + _re.sub(r'[^a-zA-Z0-9]', '_', title)
-        copy_btn = (
-            f'<button id="{btn_id}" '
-            f'onclick="(function(){{'
-            f'navigator.clipboard.writeText(`{copy_text}`).then(function(){{'
-            f'var b=document.getElementById(\'{btn_id}\');'
-            f'b.textContent=\'✅\';b.style.background=\'#22c55e\';b.style.color=\'#fff\';'
-            f'setTimeout(function(){{b.textContent=\'📋\';b.style.background=\'#f8f9fa\';b.style.color=\'#333\';}},1500);'
-            f'}});}})();" '
-            f'title="複製 {len(pre_rows)} 場即將開始賽程" '
-            f'style="display:inline-flex;align-items:center;justify-content:center;'
-            f'width:30px;height:30px;border:2px solid #222;border-radius:5px;'
-            f'background:#f8f9fa;color:#333;font-size:13px;cursor:pointer;'
-            f'box-shadow:2px 2px 0px #111;margin-left:10px;padding:0;flex-shrink:0;'
-            f'vertical-align:middle;line-height:1;">'
-            f'📋</button>'
-        )
-    else:
-        copy_btn = ''
 
+def get_table_html(title, data_list):
+    """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表"""
+    
     if not data_list:
         html = '<div style="margin-bottom: 30px;">'
         html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #f8f9fa; border: 2px solid #555; border-bottom: none; border-radius: 8px 15px 0 0; padding: 6px 18px; font-weight: bold; color: #555; letter-spacing: 1px;">{title}</div>'
@@ -162,12 +169,13 @@ def get_table_html(title, data_list, selected_date=None):
         return html
 
     html = '<div style="margin-bottom: 30px;">'
+    html = '<div style="margin-bottom: 30px;">'
     html += (
         f'<div style="display:inline-flex;align-items:center;position:relative;top:2px;z-index:2;'
         f'background-color:#fff;border:2px solid #222;border-bottom:none;'
-        f'border-radius:8px 16px 0 0;padding:6px 16px 6px 24px;font-size:1.1em;font-weight:900;'
+        f'border-radius:8px 16px 0 0;padding:6px 24px;font-size:1.1em;font-weight:900;'
         f'color:#111;letter-spacing:1px;box-shadow:2px -2px 0px rgba(0,0,0,0.05);min-width:140px;">'
-        f'{title}{copy_btn}</div>'
+        f'{title}</div>'
     )
     html += "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif;'>"
     html += "<thead><tr style='background-color: #f4f4f4; border-bottom: 2px solid #222;'>"
