@@ -4,7 +4,52 @@ def setup_cyber_css():
     """賽博龐克 CSS 與優化版的過渡動畫"""
     st.markdown("""
         <style>
-            .block-container { padding-top: 4rem !important; } 
+            .block-container { padding-top: 4rem !important; }
+
+            /* ── 側邊欄整體縮減 ── */
+            [data-testid="stSidebar"] {
+                min-width: 190px !important;
+                max-width: 190px !important;
+            }
+            [data-testid="stSidebar"] > div:first-child {
+                padding: 1rem 0.6rem 1rem 0.6rem !important;
+            }
+
+            /* 標題縮小 */
+            [data-testid="stSidebar"] h2 {
+                font-size: 0.95em !important;
+                margin-bottom: 0.3rem !important;
+            }
+            [data-testid="stSidebar"] h3 {
+                font-size: 0.8em !important;
+                margin-bottom: 0.2rem !important;
+                color: #888 !important;
+                letter-spacing: 0.05em !important;
+            }
+
+            /* Toggle 文字縮小 + 行距壓縮 */
+            [data-testid="stSidebar"] .stToggle label {
+                font-size: 0.82em !important;
+            }
+            [data-testid="stSidebar"] .stToggle {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+
+            /* 日期選取壓縮 */
+            [data-testid="stSidebar"] .stDateInput label {
+                font-size: 0.78em !important;
+                margin-bottom: 0 !important;
+            }
+            [data-testid="stSidebar"] .stDateInput input {
+                font-size: 0.82em !important;
+                padding: 4px 8px !important;
+            }
+
+            /* divider 間距壓縮 */
+            [data-testid="stSidebar"] hr {
+                margin: 0.4rem 0 !important;
+            }
             
             /* 電子鐘樣式 */
             .update-timestamp { 
@@ -31,8 +76,8 @@ def setup_cyber_css():
                 box-shadow: none !important;
                 color: #d32f2f !important; /* 警告紅文字 */
                 font-weight: 900 !important;
-                font-size: 1.15em !important;
-                letter-spacing: 2px !important;
+                font-size: 0.8em !important;
+                letter-spacing: 1px !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: flex-start !important;
