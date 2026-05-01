@@ -121,61 +121,64 @@ def setup_cyber_css():
         </style>
     """, unsafe_allow_html=True)
 
-def get_copy_button_html(league, pre_rows):
-    """用 components.html 渲染的複製按鈕 HTML（跳脫 Streamlit markdown 沙盒限制）"""
-    if not pre_rows:
-        return None
-    lines = []
+def get_table_html(title, data_list):
+    """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表
+    回傳 (html_str, estimated_height) 供 components.html() 使用"""
+    import json, re as _re
+
+    # 過濾即將開始的賽程，準備複製文字
+    pre_rows = [r for r in data_list if r.get('State') == 'pre']
+    copy_lines = []
     for r in pre_rows:
-        lines.append(f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}")
-    # 用 JSON 傳資料，避免反引號/換行逃脫問題
-    import json
-    copy_text_json = json.dumps("\n".join(lines))
-    btn_id = f"cpbtn_{league}"
-    return f"""
-    <button id="{btn_id}"
-        style="background:#f8f9fa;color:#333;border:2px solid #222;border-radius:5px;
-               box-shadow:2px 2px 0px #111;padding:4px 12px;font-size:13px;
-               cursor:pointer;font-family:monospace;font-weight:700;
-               transition:all 0.1s ease;"
-        onclick="(function(){{
+        copy_lines.append(f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}")
+    copy_text_json = json.dumps("\n".join(copy_lines))  # 安全序列化，避免引號/換行問題
+    btn_id = "cpbtn_" + _re.sub(r'[^a-zA-Z0-9]', '_', title)
+
+    if pre_rows:
+        copy_btn = (
+            f'<button id="{btn_id}" '
+            f'style="display:inline-flex;align-items:center;justify-content:center;'
+            f'width:28px;height:28px;border:2px solid #222;border-radius:5px;'
+            f'background:#f8f9fa;color:#333;font-size:13px;cursor:pointer;'
+            f'box-shadow:2px 2px 0px #111;margin-left:8px;padding:0;flex-shrink:0;">📋</button>'
+        )
+        copy_script = f"""
+        <script>
+        document.getElementById('{btn_id}').onclick = function() {{
             var text = {copy_text_json};
-            navigator.clipboard.writeText(text).then(function(){{
+            navigator.clipboard.writeText(text).then(function() {{
                 var b = document.getElementById('{btn_id}');
-                b.textContent = '✅ 已複製 {len(pre_rows)} 場';
+                b.textContent = '✅';
                 b.style.background = '#22c55e';
                 b.style.color = '#fff';
-                setTimeout(function(){{
-                    b.textContent = '📋 複製即將開始賽程（{len(pre_rows)} 場）';
+                setTimeout(function() {{
+                    b.textContent = '📋';
                     b.style.background = '#f8f9fa';
                     b.style.color = '#333';
                 }}, 2000);
             }});
-        }})();">
-        📋 複製即將開始賽程（{len(pre_rows)} 場）
-    </button>
-    """
+        }};
+        </script>
+        """
+    else:
+        copy_btn = ''
+        copy_script = ''
 
-
-def get_table_html(title, data_list):
-    """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表"""
-    
     if not data_list:
         html = '<div style="margin-bottom: 30px;">'
         html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #f8f9fa; border: 2px solid #555; border-bottom: none; border-radius: 8px 15px 0 0; padding: 6px 18px; font-weight: bold; color: #555; letter-spacing: 1px;">{title}</div>'
         html += '<div style="position: relative; z-index: 1; border: 2px solid #555; border-radius: 0 8px 8px 8px; background-color: #fff; padding: 20px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05);">'
         html += '📡 該日期暫無賽事數據，鏈路待命。'
         html += '</div></div>'
-        return html
+        return html, 120
 
-    html = '<div style="margin-bottom: 30px;">'
-    html = '<div style="margin-bottom: 30px;">'
+    html = '<div style="margin-bottom: 10px; font-family: sans-serif;">'
     html += (
         f'<div style="display:inline-flex;align-items:center;position:relative;top:2px;z-index:2;'
         f'background-color:#fff;border:2px solid #222;border-bottom:none;'
-        f'border-radius:8px 16px 0 0;padding:6px 24px;font-size:1.1em;font-weight:900;'
+        f'border-radius:8px 16px 0 0;padding:6px 16px 6px 24px;font-size:1.1em;font-weight:900;'
         f'color:#111;letter-spacing:1px;box-shadow:2px -2px 0px rgba(0,0,0,0.05);min-width:140px;">'
-        f'{title}</div>'
+        f'{title}{copy_btn}</div>'
     )
     html += "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif;'>"
     html += "<thead><tr style='background-color: #f4f4f4; border-bottom: 2px solid #222;'>"
@@ -229,4 +232,10 @@ def get_table_html(title, data_list):
         html += f"<td style='padding: 10px 12px; font-weight: bold; font-size: 1.05em;'>{row['Score']}</td></tr>"
     
     html += "</tbody></table></div></div>"
-    return html
+    html += copy_script
+
+    # 估算高度供 components.html(height=...) 使用
+    num_games = len(data_list)
+    num_cats = len(set(r['League'] for r in data_list))
+    est_height = 80 + (num_games * 52) + (num_cats * 36)
+    return html, est_height
