@@ -119,6 +119,29 @@ def setup_cyber_css():
                 color: #1a73e8 !important;
             }
         </style>
+        <script>
+        function copySchedule(blockId) {
+            var table = document.getElementById(blockId);
+            if (!table) return;
+            var rows = table.querySelectorAll('tr[data-state="pre"]');
+            var lines = [];
+            rows.forEach(function(r) {
+                var date = r.getAttribute('data-date') || '';
+                var time = r.getAttribute('data-time') || '';
+                var away = r.getAttribute('data-away') || '';
+                var home = r.getAttribute('data-home') || '';
+                lines.push(date + ' ' + time + ' ' + away + ' vs ' + home);
+            });
+            if (lines.length === 0) {
+                alert('沒有即將開始的賽事');
+                return;
+            }
+            navigator.clipboard.writeText(lines.join('\n')).then(function() {
+                var btn = document.querySelector('[onclick="copySchedule(\''+blockId+'\')" i]');
+                alert('已複製 ' + lines.length + ' 場賽程！');
+            });
+        }
+        </script>
     """, unsafe_allow_html=True)
 
 def get_table_html(title, data_list):
@@ -132,10 +155,34 @@ def get_table_html(title, data_list):
         html += '</div></div>'
         return html
 
+
+    import hashlib as _hlib
+    block_id = 'blk_' + _hlib.md5(title.encode()).hexdigest()[:6]
+    copy_btn = (
+        "<span style='display:inline-flex;align-items:center;justify-content:center;"
+        "width:20px;height:20px;position:relative;cursor:pointer;margin-left:10px;"
+        "vertical-align:middle;opacity:0.4;transition:opacity 0.15s;' "
+        "title='複製即將開始賽程' "
+        "onclick='copySchedule(\"" + block_id + "\")' "
+        "onmouseover=\"this.style.opacity='1'\" "
+        "onmouseout=\"this.style.opacity='0.4'\">"
+        "<span style='position:absolute;bottom:0;right:0;width:13px;height:13px;"
+        "border:2px solid #444;border-radius:2px;background:#fff;'></span>"
+        "<span style='position:absolute;top:0;left:0;width:13px;height:13px;"
+        "border:2px solid #444;border-radius:2px;background:#ddd;'></span>"
+        "</span>"
+    )
+
     html = '<div style="margin-bottom: 30px;">'
-    html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #fff; border: 2px solid #222; border-bottom: none; border-radius: 8px 16px 0 0; padding: 6px 20px; font-size: 1.1em; font-weight: 900; color: #111; letter-spacing: 1px; box-shadow: 2px -2px 0px rgba(0,0,0,0.05);">{title}</div>'
+    html += (
+        f'<div style="display:inline-flex;align-items:center;position:relative;top:2px;z-index:2;'
+        f'background-color:#fff;border:2px solid #222;border-bottom:none;'
+        f'border-radius:8px 16px 0 0;padding:6px 20px;font-size:1.1em;font-weight:900;'
+        f'color:#111;letter-spacing:1px;box-shadow:2px -2px 0px rgba(0,0,0,0.05);min-width:130px;">'
+        f'{title}{copy_btn}</div>'
+    )
     html += '<div style="position: relative; z-index: 1; border: 2px solid #222; border-radius: 0 8px 8px 8px; background-color: #fff; padding: 0; overflow: hidden; box-shadow: 5px 5px 0px rgba(0,0,0,0.15);">'
-    html += "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif;'>"
+    html += f"<table id='{block_id}' style='width: 100%; border-collapse: collapse; font-family: sans-serif;'>"
     html += "<thead><tr style='background-color: #f4f4f4; border-bottom: 2px solid #222;'>"
     html += "<th style='text-align: left; padding: 10px 12px; width: 15%; font-size: 0.9em; color: #555;'>時間</th>"
     html += "<th style='text-align: left; padding: 10px 12px; width: 20%; font-size: 0.9em; color: #555;'>狀態</th>"
@@ -180,7 +227,19 @@ def get_table_html(title, data_list):
         else:
             match_html = match_text
 
-        html += "<tr class='match-row' style='border-bottom: 1px solid #eee;'>"
+        # pre 列加 data-* 屬性，供複製按鈕讀取
+        if row['State'] == 'pre':
+            date_attr = row.get('Date', '')
+            tr_attrs = (
+                f"data-state='pre' "
+                f"data-date='{date_attr}' "
+                f"data-time='{row["Time"]}' "
+                f"data-away='{row["Away"]}' "
+                f"data-home='{row["Home"]}'"
+            )
+        else:
+            tr_attrs = ""
+        html += f"<tr class='match-row' {tr_attrs} style='border-bottom: 1px solid #eee;'>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em;'>{row['Time']}</td>"
         html += f"<td style='padding: 10px 12px; font-size: 0.95em; {status_style}'>{status_box}</td>"
         html += f"<td class='match-cell' style='padding: 10px 12px; font-size: 0.95em;'>{match_html}</td>"
