@@ -6,13 +6,9 @@ def setup_cyber_css():
         <style>
             .block-container { padding-top: 4rem !important; }
 
-            /* ── 側邊欄整體縮減 ── */
-            [data-testid="stSidebar"] {
-                min-width: 190px !important;
-                max-width: 190px !important;
-            }
+            /* ── 側邊欄內距縮減（不動寬度，避免自動收起）── */
             [data-testid="stSidebar"] > div:first-child {
-                padding: 1rem 0.6rem 1rem 0.6rem !important;
+                padding: 1rem 0.7rem 1rem 0.7rem !important;
             }
 
             /* 標題縮小 */
