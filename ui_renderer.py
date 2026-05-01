@@ -124,7 +124,7 @@ def get_table_html(title, data_list):
         match_url = row.get('URL', '')
         vs_span = "<span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span>"
         serving = row.get('Serving', '')
-        serve_dot = "<span style='display:inline-block;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-left:8px solid #22c55e;margin-left:5px;vertical-align:middle;'></span>"
+        serve_dot = "<span style='display:inline-block;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #22c55e;margin-right:5px;vertical-align:middle;'></span>"
         away_name = row['Away'] + (serve_dot if serving == 'away' else '')
         home_name = row['Home'] + (serve_dot if serving == 'home' else '')
         match_text = f"{away_name} {vs_span} {home_name}"
