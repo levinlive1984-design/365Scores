@@ -84,7 +84,11 @@ def get_365_scoreboard(league_type, target_date):
             if status_group == 4:
                 state, status_text = 'post', "已結束"
             elif status_group == 3:
-                state, status_text = 'in', game.get('statusText', '')
+                state = 'in'
+                period = game.get('statusText', '')
+                clock  = game.get('gameTime', '') or game.get('clock', '')
+                # 組合「第二節 00:07」，沒有時間就只顯示節次
+                status_text = f"{period} {clock}".strip() if clock else period
             else:
                 state, status_text = 'pre', game.get('statusText', '預計')
                 
