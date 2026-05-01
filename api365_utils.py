@@ -95,12 +95,28 @@ def get_365_scoreboard(league_type, target_date):
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
             
-            # 網球專屬局點處理
+            # 網球專屬局點處理：加總各盤局數
             extra_score = ""
             if league_type == 'tennis' and state == 'in':
+                away_games = 0
+                home_games = 0
                 for stage in game.get('stages', []):
-                    if stage.get('id') == 34:
-                        extra_score = f" <span style='font-size:0.85em; color:#888;'>({int(away.get('score', 0))}:{int(home.get('score', 0))})</span>"
+                    sid = stage.get('id')
+                    # id=34 是當前局點, id=35 是盤數加總，都跳過
+                    if sid in (34, 35):
+                        continue
+                    h = stage.get('homeCompetitorScore', -1)
+                    a = stage.get('awayCompetitorScore', -1)
+                    # -1 代表該盤未開始，跳過
+                    if h >= 0 and a >= 0:
+                        home_games += int(h)
+                        away_games += int(a)
+                if home_games > 0 or away_games > 0:
+                    extra_score = (
+                        " <span style='font-size:0.82em;color:#888;"
+                        "background:#f5f5f5;padding:1px 5px;border-radius:3px;'>"
+                        f"({away_games}:{home_games})</span>"
+                    )
             
             start_time_str = game.get('startTime', '')
             time_display = start_time_str[11:16] if len(start_time_str) >= 16 else "--:--"
