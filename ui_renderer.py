@@ -109,8 +109,17 @@ def get_table_html(title, data_list):
             html += "<tr style='background-color: #e9ecef; font-weight: bold; color: #222;'>"
             html += f"<td colspan='4' style='padding: 6px 12px; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; font-size: 0.85em;'>{current_league}</td></tr>"
 
-        status_style = "color: #dc3545; font-weight: bold;" if row['State'] == 'in' else ""
-        status_box = f"<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>{row['Status']}</span>" if row['State'] == 'post' else row['Status']
+        if row['State'] == 'in':
+            status_style = ""
+            dot = "<span style='" + "width:6px;height:6px;border-radius:50%;background:#7dffaa;display:inline-block;flex-shrink:0" + "'></span>"
+            status_box = "<span style='" + "display:inline-flex;align-items:center;gap:5px;background:#1a7f3c;color:#fff;padding:3px 9px;border-radius:20px;font-size:0.82em;font-weight:700;font-family:monospace;letter-spacing:0.03em;box-shadow:0 1px 4px rgba(26,127,60,0.3)" + "'>" + dot + row['Status'] + "</span>"
+        elif row['State'] == 'post':
+            status_style = ""
+            status_box = "<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>" + row['Status'] + "</span>"
+        else:
+            status_style = ""
+            status_box = row['Status']
+
         
         match_url = row.get('URL', '')
         vs_span = "<span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span>"
