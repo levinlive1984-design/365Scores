@@ -111,8 +111,8 @@ def get_table_html(title, data_list):
 
         if row['State'] == 'in':
             status_style = ""
-            dot = "<span style='" + "width:6px;height:6px;border-radius:50%;background:#7dffaa;display:inline-block;flex-shrink:0" + "'></span>"
-            status_box = "<span style='" + "display:inline-flex;align-items:center;gap:5px;background:#1a7f3c;color:#fff;padding:3px 9px;border-radius:20px;font-size:0.82em;font-weight:700;font-family:monospace;letter-spacing:0.03em;box-shadow:0 1px 4px rgba(26,127,60,0.3)" + "'>" + dot + row['Status'] + "</span>"
+            # 紅色粗體顯示節次 + 時間，例如「第二節 00:07」
+            status_box = "<span style='color:#dc3545;font-weight:700;font-size:0.92em;white-space:nowrap;'>" + row['Status'] + "</span>"
         elif row['State'] == 'post':
             status_style = ""
             status_box = "<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>" + row['Status'] + "</span>"
