@@ -54,10 +54,10 @@ def fetch_league_data(active_leagues, selected_date, _time_bucket):
 
 
 with st.sidebar:
-    st.markdown("## 🛰️ 賽程調度中心")
-    selected_date = st.date_input("🗓️ 調閱日期", datetime.now(tw_tz).date())
+    st.markdown("<div style='font-size:0.9em;font-weight:900;margin-bottom:4px;'>🛰️ 賽程調度中心</div>", unsafe_allow_html=True)
+    selected_date = st.date_input("🗓️ 日期", datetime.now(tw_tz).date(), label_visibility="collapsed")
     st.divider()
-    st.markdown("### 🔌 板塊撥桿 (Toggle)")
+    st.markdown("<div style='font-size:0.75em;color:#888;letter-spacing:0.08em;font-weight:600;margin-bottom:2px;'>🔌 板塊撥桿</div>", unsafe_allow_html=True)
 
     show_nba = st.toggle("🏀 NBA", key='toggle_nba')
     show_mlb = st.toggle("⚾ MLB", key='toggle_mlb')
