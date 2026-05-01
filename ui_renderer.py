@@ -122,25 +122,19 @@ def setup_cyber_css():
     """, unsafe_allow_html=True)
 
 def get_table_html(title, data_list):
-    """生成帶有「戰術資料夾頁籤」外框的 HTML 賽事表
-    回傳 (html_str, estimated_height) 供 components.html() 使用"""
+    """生成完整獨立 HTML（含 <style>），供 components.html() 使用。
+    回傳 (html_str, estimated_height)"""
     import json, re as _re
 
-    # 過濾即將開始的賽程，準備複製文字
+    # ── 複製按鈕資料 ──
     pre_rows = [r for r in data_list if r.get('State') == 'pre']
-    copy_lines = []
-    for r in pre_rows:
-        copy_lines.append(f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}")
-    copy_text_json = json.dumps("\n".join(copy_lines))  # 安全序列化，避免引號/換行問題
+    copy_lines = [f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}" for r in pre_rows]
+    copy_text_json = json.dumps("\n".join(copy_lines))
     btn_id = "cpbtn_" + _re.sub(r'[^a-zA-Z0-9]', '_', title)
 
     if pre_rows:
         copy_btn = (
-            f'<button id="{btn_id}" '
-            f'style="display:inline-flex;align-items:center;justify-content:center;'
-            f'width:28px;height:28px;border:2px solid #222;border-radius:5px;'
-            f'background:#f8f9fa;color:#333;font-size:13px;cursor:pointer;'
-            f'box-shadow:2px 2px 0px #111;margin-left:8px;padding:0;flex-shrink:0;">📋</button>'
+            f'<button id="{btn_id}" class="copy-btn">📋</button>'
         )
         copy_script = f"""
         <script>
@@ -164,78 +158,147 @@ def get_table_html(title, data_list):
         copy_btn = ''
         copy_script = ''
 
+    # ── 空資料 ──
     if not data_list:
-        html = '<div style="margin-bottom: 30px;">'
-        html += f'<div style="display: inline-block; position: relative; top: 2px; z-index: 2; background-color: #f8f9fa; border: 2px solid #555; border-bottom: none; border-radius: 8px 15px 0 0; padding: 6px 18px; font-weight: bold; color: #555; letter-spacing: 1px;">{title}</div>'
-        html += '<div style="position: relative; z-index: 1; border: 2px solid #555; border-radius: 0 8px 8px 8px; background-color: #fff; padding: 20px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05);">'
-        html += '📡 該日期暫無賽事數據，鏈路待命。'
-        html += '</div></div>'
-        return html, 120
+        body = f"""
+        <div class="tab-label">{title}</div>
+        <div class="card-empty">📡 該日期暫無賽事數據，鏈路待命。</div>
+        """
+        rows_html = ''
+        est_height = 120
+    else:
+        # ── 表格列 ──
+        rows_html = ""
+        current_league = None
+        for row in data_list:
+            if row['League'] != current_league:
+                current_league = row['League']
+                rows_html += f"<tr class='league-header'><td colspan='4'>{current_league}</td></tr>"
 
-    html = '<div style="margin-bottom: 10px; font-family: sans-serif;">'
-    html += (
-        f'<div style="display:inline-flex;align-items:center;position:relative;top:2px;z-index:2;'
-        f'background-color:#fff;border:2px solid #222;border-bottom:none;'
-        f'border-radius:8px 16px 0 0;padding:6px 16px 6px 24px;font-size:1.1em;font-weight:900;'
-        f'color:#111;letter-spacing:1px;box-shadow:2px -2px 0px rgba(0,0,0,0.05);min-width:140px;">'
-        f'{title}{copy_btn}</div>'
-    )
-    html += "<table style='width: 100%; border-collapse: collapse; font-family: sans-serif;'>"
-    html += "<thead><tr style='background-color: #f4f4f4; border-bottom: 2px solid #222;'>"
-    html += "<th style='text-align: left; padding: 10px 12px; width: 15%; font-size: 0.9em; color: #555;'>時間</th>"
-    html += "<th style='text-align: left; padding: 10px 12px; width: 20%; font-size: 0.9em; color: #555;'>狀態</th>"
-    html += "<th style='text-align: left; padding: 10px 12px; width: 45%; font-size: 0.9em; color: #555;'>對戰組合</th>"
-    html += "<th style='text-align: left; padding: 10px 12px; width: 20%; font-size: 0.9em; color: #555;'>比分</th>"
-    html += "</tr></thead><tbody>"
-    
-    current_league = None
-    for row in data_list:
-        if row['League'] != current_league:
-            current_league = row['League']
-            html += "<tr style='background-color: #e9ecef; font-weight: bold; color: #222;'>"
-            html += f"<td colspan='4' style='padding: 6px 12px; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; font-size: 0.85em;'>{current_league}</td></tr>"
+            if row['State'] == 'in':
+                status_box = f"<span class='status-live'>{row['Status']}</span>"
+            elif row['State'] == 'post':
+                status_box = f"<span class='status-post'>{row['Status']}</span>"
+            else:
+                status_box = row['Status']
 
-        if row['State'] == 'in':
-            status_style = ""
-            # 紅色粗體顯示節次 + 時間，例如「第二節 00:07」
-            status_box = "<span style='color:#dc3545;font-weight:700;font-size:0.92em;white-space:nowrap;'>" + row['Status'] + "</span>"
-        elif row['State'] == 'post':
-            status_style = ""
-            status_box = "<span style='background-color: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em;'>" + row['Status'] + "</span>"
-        else:
-            status_style = ""
-            status_box = row['Status']
+            vs_span = "<span class='vs'>VS</span>"
+            serving = row.get('Serving', '')
+            serve_dot = "<span class='serve-dot'></span>"
+            away_name = row['Away'] + (serve_dot if serving == 'away' else '')
+            home_name = (serve_dot if serving == 'home' else '') + row['Home']
+            match_text = f"{away_name} {vs_span} {home_name}"
 
-        
-        match_url = row.get('URL', '')
-        vs_span = "<span style='color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 5px;'>VS</span>"
-        serving = row.get('Serving', '')
-        serve_dot = "<span style='display:inline-block;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:8px solid #22c55e;margin-right:5px;vertical-align:middle;'></span>"
-        away_name = row['Away'] + (serve_dot if serving == 'away' else '')
-        home_name = row['Home'] + (serve_dot if serving == 'home' else '')
-        match_text = f"{away_name} {vs_span} {home_name}"
+            match_url = row.get('URL', '')
+            if match_url:
+                match_cell = f'<a href="{match_url}" target="_blank" rel="noopener" class="match-link">{match_text}</a>'
+            else:
+                match_cell = match_text
 
-        if match_url:
-            a_style = 'color:inherit;text-decoration:none;display:block'
-            match_html = (
-                f'<a href="{match_url}" target="_blank" rel="noopener" '
-                f'style="{a_style}">'
-                f'{match_text}</a>'
-            )
-        else:
-            match_html = match_text
+            rows_html += f"""
+            <tr class='match-row'>
+                <td class='col-time'>{row['Time']}</td>
+                <td class='col-status'>{status_box}</td>
+                <td class='col-match'>{match_cell}</td>
+                <td class='col-score'>{row['Score']}</td>
+            </tr>"""
 
-        html += "<tr class='match-row' style='border-bottom: 1px solid #eee;'>"
-        html += f"<td style='padding: 10px 12px; font-size: 0.95em;'>{row['Time']}</td>"
-        html += f"<td style='padding: 10px 12px; font-size: 0.95em; {status_style}'>{status_box}</td>"
-        html += f"<td class='match-cell' style='padding: 10px 12px; font-size: 0.95em;'>{match_html}</td>"
-        html += f"<td style='padding: 10px 12px; font-weight: bold; font-size: 1.05em;'>{row['Score']}</td></tr>"
-    
-    html += "</tbody></table></div></div>"
-    html += copy_script
+        num_games = len(data_list)
+        num_cats  = len(set(r['League'] for r in data_list))
+        # 每列高度更寬裕，加上頁籤+表頭+底部 padding
+        est_height = 60 + 44 + (num_cats * 38) + (num_games * 56) + 24
+        body = f"""
+        <div class="tab-row">
+            <div class="tab-label">{title}{copy_btn}</div>
+        </div>
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th class='col-time'>時間</th>
+                        <th class='col-status'>狀態</th>
+                        <th class='col-match'>對戰組合</th>
+                        <th class='col-score'>比分</th>
+                    </tr>
+                </thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>"""
 
-    # 估算高度供 components.html(height=...) 使用
-    num_games = len(data_list)
-    num_cats = len(set(r['League'] for r in data_list))
-    est_height = 80 + (num_games * 52) + (num_cats * 36)
-    return html, est_height
+    full_html = f"""
+    <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{ font-family: sans-serif; background: transparent; padding: 4px 2px 8px 2px; }}
+
+        .tab-row {{ display: flex; align-items: flex-end; }}
+        .tab-label {{
+            display: inline-flex; align-items: center;
+            position: relative; top: 2px; z-index: 2;
+            background: #fff;
+            border: 2px solid #222; border-bottom: none;
+            border-radius: 8px 16px 0 0;
+            padding: 6px 16px 6px 20px;
+            font-size: 1.05em; font-weight: 900;
+            color: #111; letter-spacing: 1px;
+            box-shadow: 2px -2px 0px rgba(0,0,0,0.05);
+            min-width: 120px;
+        }}
+        .card {{
+            position: relative; z-index: 1;
+            border: 2px solid #222;
+            border-radius: 0 8px 8px 8px;
+            background: #fff;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.07);
+            overflow: hidden;
+        }}
+        .card-empty {{
+            border: 2px solid #555;
+            border-radius: 0 8px 8px 8px;
+            padding: 20px; color: #888;
+        }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        thead tr {{ background: #f4f4f4; border-bottom: 2px solid #222; }}
+        th {{ text-align: left; padding: 10px 12px; font-size: 0.88em; color: #555; font-weight: 600; }}
+        td {{ padding: 10px 12px; font-size: 0.93em; vertical-align: middle; }}
+        .col-time   {{ width: 14%; white-space: nowrap; }}
+        .col-status {{ width: 20%; }}
+        .col-match  {{ width: 46%; }}
+        .col-score  {{ width: 20%; font-weight: 700; font-size: 1.0em; white-space: nowrap; }}
+
+        tr.league-header td {{
+            background: #e9ecef; font-weight: 700; color: #222;
+            font-size: 0.84em; padding: 6px 12px;
+            border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;
+        }}
+        tr.match-row {{ border-bottom: 1px solid #eee; }}
+        tr.match-row:hover {{ background: #eef4ff; cursor: pointer; }}
+        tr.match-row:hover .col-match {{ color: #1a73e8; }}
+
+        .status-live {{ color: #dc3545; font-weight: 700; font-size: 0.92em; white-space: nowrap; }}
+        .status-post {{ background: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; }}
+        .vs {{ color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 4px; }}
+        .serve-dot {{
+            display: inline-block; width: 0; height: 0;
+            border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+            border-right: 8px solid #22c55e;
+            margin: 0 4px; vertical-align: middle;
+        }}
+        .match-link {{ color: inherit; text-decoration: none; }}
+        .match-link:hover {{ color: #1a73e8; }}
+
+        .copy-btn {{
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px;
+            border: 2px solid #222; border-radius: 5px;
+            background: #f8f9fa; color: #333;
+            font-size: 13px; cursor: pointer;
+            box-shadow: 2px 2px 0px #111;
+            margin-left: 8px; padding: 0; flex-shrink: 0;
+            transition: all 0.1s ease;
+        }}
+        .copy-btn:active {{ box-shadow: 0 0 0 #111; transform: translate(2px,2px); }}
+    </style>
+    {body}
+    {copy_script}
+    """
+    return full_html, est_height
