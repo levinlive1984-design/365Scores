@@ -180,7 +180,7 @@ def get_table_html(title, data_list):
             elif row['State'] == 'post':
                 status_box = f"<span class='status-post'>{row['Status']}</span>"
             else:
-                status_box = row['Status']
+                status_box = f"<span class='status-pre'>{row['Status']}</span>"
 
             vs_span = "<span class='vs'>VS</span>"
             serving = row.get('Serving', '')
@@ -228,35 +228,19 @@ def get_table_html(title, data_list):
     # 自動量高腳本：渲染後把實際 scrollHeight 傳給父頁面
     auto_height_script = """
 <script>
-function _expandFrame() {
+function _reportH() {
     var h = document.body.scrollHeight || document.documentElement.scrollHeight;
-    try {
-        window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 20}, '*');
-    } catch(e) {}
-    try {
-        var frames = window.parent.document.querySelectorAll('iframe');
-        for (var i = 0; i < frames.length; i++) {
-            if (frames[i].contentWindow === window) {
-                frames[i].style.height = (h + 20) + 'px';
-                frames[i].style.minHeight = (h + 20) + 'px';
-                break;
-            }
-        }
-    } catch(e) {}
+    window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 16}, '*');
 }
-document.addEventListener('DOMContentLoaded', _expandFrame);
-window.addEventListener('load', _expandFrame);
-setTimeout(_expandFrame, 100);
-setTimeout(_expandFrame, 400);
-if (window.ResizeObserver) {
-    new ResizeObserver(function() { setTimeout(_expandFrame, 50); }).observe(document.body);
-}
+document.addEventListener('DOMContentLoaded', _reportH);
+if (document.readyState !== 'loading') { setTimeout(_reportH, 50); }
+if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body); }
 </script>"""
 
     full_html = f"""
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ font-family: sans-serif; background: transparent; padding: 4px 2px 8px 2px; overflow: hidden; }}
+        body {{ font-family: sans-serif; background: transparent; padding: 4px 2px 8px 2px; }}
 
         .tab-row {{ display: flex; align-items: flex-end; }}
         .tab-label {{
@@ -304,6 +288,7 @@ if (window.ResizeObserver) {
 
         .status-live {{ color: #dc3545; font-weight: 700; font-size: 0.92em; white-space: nowrap; }}
         .status-post {{ background: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; }}
+        .status-pre  {{ background: #e6f4ea; color: #1e7e34; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }}
         .vs {{ color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 4px; }}
         .serve-dot {{
             display: inline-block; width: 0; height: 0;
