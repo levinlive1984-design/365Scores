@@ -225,6 +225,18 @@ def get_table_html(title, data_list):
             </table>
         </div>"""
 
+    # 自動量高腳本：渲染後把實際 scrollHeight 傳給父頁面
+    auto_height_script = """
+<script>
+function _reportH() {
+    var h = document.body.scrollHeight || document.documentElement.scrollHeight;
+    window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 16}, '*');
+}
+document.addEventListener('DOMContentLoaded', _reportH);
+if (document.readyState !== 'loading') { setTimeout(_reportH, 50); }
+if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body); }
+</script>"""
+
     full_html = f"""
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -300,5 +312,8 @@ def get_table_html(title, data_list):
     </style>
     {body}
     {copy_script}
+    {auto_height_script}
     """
-    return full_html, est_height
+    # est_height 給足夠寬裕的初始值，之後由 JS 動態修正
+    # 用較大係數避免第一幀就截斷
+    return full_html, est_height + 80
