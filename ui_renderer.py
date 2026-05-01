@@ -228,19 +228,35 @@ def get_table_html(title, data_list):
     # 自動量高腳本：渲染後把實際 scrollHeight 傳給父頁面
     auto_height_script = """
 <script>
-function _reportH() {
+function _expandFrame() {
     var h = document.body.scrollHeight || document.documentElement.scrollHeight;
-    window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 16}, '*');
+    try {
+        window.parent.postMessage({type:'streamlit:setFrameHeight', height: h + 20}, '*');
+    } catch(e) {}
+    try {
+        var frames = window.parent.document.querySelectorAll('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            if (frames[i].contentWindow === window) {
+                frames[i].style.height = (h + 20) + 'px';
+                frames[i].style.minHeight = (h + 20) + 'px';
+                break;
+            }
+        }
+    } catch(e) {}
 }
-document.addEventListener('DOMContentLoaded', _reportH);
-if (document.readyState !== 'loading') { setTimeout(_reportH, 50); }
-if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body); }
+document.addEventListener('DOMContentLoaded', _expandFrame);
+window.addEventListener('load', _expandFrame);
+setTimeout(_expandFrame, 100);
+setTimeout(_expandFrame, 400);
+if (window.ResizeObserver) {
+    new ResizeObserver(function() { setTimeout(_expandFrame, 50); }).observe(document.body);
+}
 </script>"""
 
     full_html = f"""
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ font-family: sans-serif; background: transparent; padding: 4px 2px 8px 2px; }}
+        body {{ font-family: sans-serif; background: transparent; padding: 4px 2px 8px 2px; overflow: hidden; }}
 
         .tab-row {{ display: flex; align-items: flex-end; }}
         .tab-label {{
