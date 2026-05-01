@@ -186,7 +186,7 @@ def get_table_html(title, data_list):
             serving = row.get('Serving', '')
             serve_dot = "<span class='serve-dot'></span>"
             away_name = row['Away'] + (serve_dot if serving == 'away' else '')
-            home_name = (serve_dot if serving == 'home' else '') + row['Home']
+            home_name = row['Home'] + (serve_dot if serving == 'home' else '')
             match_text = f"{away_name} {vs_span} {home_name}"
 
             match_url = row.get('URL', '')
