@@ -14,7 +14,7 @@ except ModuleNotFoundError:
 
 # --- 核心模組匯入 ---
 from api365_utils import get_365_scoreboard
-from ui_renderer import setup_cyber_css, get_table_html, get_copy_button_html
+from ui_renderer import setup_cyber_css, get_table_html
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="365賽程抓爬網", layout="wide", initial_sidebar_state="expanded")
@@ -134,13 +134,9 @@ if active_leagues:
             with cols[i]:
                 for league in col_assignments[i]:
                     icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
-                    html_content = get_table_html(f"{icon} {league}", league_data[league])
-                    st.markdown(html_content, unsafe_allow_html=True)
+                    html_content, est_height = get_table_html(f"{icon} {league}", league_data[league])
+                    components.html(html_content, height=est_height, scrolling=False)
 
-                    # 複製按鈕：用 components.html 繞過 markdown 沙盒，clipboard 才能真正運作
-                    pre_rows = [r for r in league_data[league] if r.get('State') == 'pre']
-                    btn_html = get_copy_button_html(league, pre_rows)
-                    if btn_html:
-                        components.html(btn_html, height=42)
+                    # 舊的 st.button 複製邏輯已移除，複製按鈕已內嵌於頁籤中
 else:
     st.warning("📡 請由左側面板啟動賽事數據鏈路...")
