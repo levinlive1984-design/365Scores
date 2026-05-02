@@ -107,7 +107,7 @@ if active_leagues:
     )
 
     # ── 備忘錄浮動抽屜：inject 到主頁面 DOM（固定懸浮，不隨捲軸移動）──
-    components.html(get_memo_html(league_data), height=0, scrolling=False)
+    components.html(get_memo_html(league_data), height=1, scrolling=False)
 
     with scoreboard_container:
         num_cols = min(len(active_leagues), 3)
