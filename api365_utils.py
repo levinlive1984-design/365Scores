@@ -117,7 +117,7 @@ def get_365_scoreboard(league_type, target_date):
                         away_games += int(a)
                 if home_games > 0 or away_games > 0:
                     extra_score = (
-                        " <span style='font-size:0.82em;color:#888;"
+                        " <span style='font-size:0.82em;color:#dc3545;font-weight:bold;"
                         "background:#f5f5f5;padding:1px 5px;border-radius:3px;'>"
                         f"({away_games}:{home_games})</span>"
                     )
