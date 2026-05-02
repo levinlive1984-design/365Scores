@@ -442,7 +442,7 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
         .col-time {{ width: 14%; white-space: nowrap; font-size: 0.75em;}}
         .col-status {{ width: 20%; }}
         .col-match {{ width: 46%; font-size: 0.75em;}}
-        .col-score {{ width: 20%; font-weight: 700; font-size: 1.0em; white-space: nowrap; }}
+        .col-score {{ width: 20%; font-weight: 700; font-size: 0.85em; white-space: nowrap; }}
         tr.league-header td {{
             background: #e9ecef; font-weight: 700; color: #222;
             font-size: 0.84em; padding: 6px 12px;
