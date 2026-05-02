@@ -470,8 +470,8 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
         .status-pre  {{ background: #e6f4ea; color: #1e7e34; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }}
         .vs {{ color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 4px; }}
         .serving-highlight {{
-            background: #dcfce7; border-radius: 3px; padding: 1px 5px;
-            color: #166534; font-weight: 600;
+            background: #fff7ed; border-radius: 3px; padding: 1px 5px;
+            color: #9a3412; font-weight: 600;
         }}
         .match-link {{ color: inherit; text-decoration: none; }}
         .match-link:hover {{ color: #1a73e8; }}
