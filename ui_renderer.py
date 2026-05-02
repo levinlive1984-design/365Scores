@@ -96,9 +96,12 @@ function doCopy(text, btnId) {
 
 def get_memo_html(league_data):
     """
-    生成浮動備忘錄抽屜完整 HTML。
-    ⚠️ 必須用 components.html() 渲染，st.markdown 會把 <script> 過濾掉！
-    回傳 (html_str, height=60)。
+    生成備忘錄 HTML，以 JS inject 方式寫入主頁面 document.body。
+    透過 st.markdown(..., unsafe_allow_html=True) 注入。
+    Streamlit 雖然過濾 <script>，但 <img onerror> trick 可執行 JS，
+    最可靠的做法是用一個隱藏的 components.html iframe 傳訊息給自己。
+    ─── 實際做法：直接把所有 DOM 和 CSS 用 JS 字串動態建立並 inject 到 parent ───
+    回傳純 HTML 字串（給 st.markdown 用）。
     """
     import json, re as _re
 
@@ -113,125 +116,194 @@ def get_memo_html(league_data):
         if pre_rows:
             groups.append((league, LEAGUE_ICONS.get(league, '🏟️'), pre_rows))
 
-    if not groups:
-        inner_html = "<div class='memo-empty'>📭 目前無即將開始的比賽</div>"
-    else:
-        inner_html = ""
-        for league, icon, pre_rows in groups:
-            group_lines = [
-                f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
-                for r in pre_rows
-            ]
-            group_text_json = json.dumps("\n".join(group_lines))
-            group_btn_id = "grp_" + _re.sub(r'[^a-zA-Z0-9]', '_', league)
+    # ── 把備忘錄內容序列化成 JSON 傳給 JS ──
+    memo_groups = []
+    for league, icon, pre_rows in groups:
+        group_lines = "\n".join(
+            f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
+            for r in pre_rows
+        )
+        matches = [
+            {"text": f"{r.get('Date','')} {r['Time']}  {r['Away']} vs {r['Home']}",
+             "copy": f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"}
+            for r in pre_rows
+        ]
+        memo_groups.append({
+            "league": league,
+            "icon": icon,
+            "groupCopy": group_lines,
+            "matches": matches
+        })
 
-            rows_html = ""
-            for i, r in enumerate(pre_rows):
-                line = f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
-                line_json = json.dumps(line)
-                row_btn_id = f"row_{_re.sub(r'[^a-zA-Z0-9]', '_', league)}_{i}"
-                rows_html += f"""
-                <div class='memo-row'>
-                    <span class='memo-match'>{r.get('Date','')} {r['Time']}&nbsp;&nbsp;{r['Away']} vs {r['Home']}</span>
-                    <button class='memo-copy-btn' id='{row_btn_id}'
-                        onclick='doCopy({line_json}, "{row_btn_id}")'>📋</button>
-                </div>"""
+    memo_data_json = json.dumps(memo_groups, ensure_ascii=False)
 
-            inner_html += f"""
-            <div class='memo-group'>
-                <div class='memo-group-header'>
-                    <span>{icon} {league}</span>
-                    <button class='memo-copy-btn' id='{group_btn_id}'
-                        onclick='doCopy({group_text_json}, "{group_btn_id}")'>📋</button>
-                </div>
-                <div class='memo-group-body'>{rows_html}</div>
-            </div>"""
-
-    html = f"""<!DOCTYPE html>
+    # ── 整段邏輯放在 components.html iframe 裡，用 postMessage 通知父頁面 ──
+    # 但最簡單可靠的是：直接在 iframe 裡操控 window.parent.document
+    # Streamlit Cloud 同源，所以可以存取 parent DOM。
+    return f"""<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8">
 <style>
-* {{ box-sizing: border-box; margin: 0; padding: 0; }}
-body {{ background: transparent; overflow: hidden; font-family: sans-serif; }}
-
-#memo-fab {{
-    position: fixed; top: 8px; right: 8px; z-index: 9999;
-    width: 44px; height: 44px; border-radius: 10px;
-    background: #fff; border: 2px solid #222; box-shadow: 3px 3px 0px #111;
-    cursor: pointer; font-size: 20px; display: flex;
-    align-items: center; justify-content: center;
-    transition: all 0.15s ease; padding: 0;
-}}
-#memo-fab:hover {{ background: #f0f4ff; transform: translate(-1px,-1px); box-shadow: 4px 4px 0px #111; }}
-
-#memo-drawer {{
-    position: fixed; top: 0; right: 0; width: 360px; height: 100vh;
-    background: #fff; border-left: 2px solid #222;
-    box-shadow: -6px 0 24px rgba(0,0,0,0.13); z-index: 9998;
-    transform: translateX(100%);
-    transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
-    display: flex; flex-direction: column; overflow: hidden;
-}}
-#memo-drawer.open {{ transform: translateX(0); }}
-
-.memo-header {{
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border-bottom: 2px solid #222;
-    font-weight: 900; font-size: 1.0em; background: #f8f9fa; flex-shrink: 0;
-}}
-.memo-close {{
-    width: 32px; height: 32px; border: 2px solid #222; border-radius: 6px;
-    background: #fff; cursor: pointer; font-size: 15px; display: flex;
-    align-items: center; justify-content: center;
-    box-shadow: 2px 2px 0px #111; font-weight: 900; padding: 0;
-}}
-.memo-body {{ flex: 1; overflow-y: auto; padding: 12px 14px; background: #fafafa; }}
-.memo-empty {{ color: #aaa; text-align: center; padding: 48px 0; font-size: 0.95em; }}
-.memo-group {{
-    margin-bottom: 12px; border: 2px solid #222; border-radius: 8px;
-    overflow: hidden; background: #fff;
-}}
-.memo-group-header {{
-    display: flex; align-items: center; justify-content: space-between;
-    background: #f0f0f0; padding: 8px 12px;
-    font-weight: 800; font-size: 0.9em; border-bottom: 1px solid #ddd;
-}}
-.memo-row {{
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 12px; border-bottom: 1px solid #eee; gap: 8px;
-}}
-.memo-row:last-child {{ border-bottom: none; }}
-.memo-match {{
-    flex: 1; color: #333; font-size: 0.86em; line-height: 1.5;
-    font-family: "SF Mono","Fira Code",monospace;
-}}
-.memo-copy-btn {{
-    flex-shrink: 0; width: 28px; height: 28px;
-    border: 1.5px solid #bbb; border-radius: 5px; background: #f8f9fa;
-    cursor: pointer; font-size: 13px; display: inline-flex;
-    align-items: center; justify-content: center; padding: 0;
-    box-shadow: 1px 1px 0px #ccc; transition: all 0.1s ease;
-}}
-.memo-copy-btn:hover {{ background: #e8f0fe; border-color: #4a90d9; }}
-.memo-copy-btn:active {{ transform: scale(0.92); box-shadow: none; }}
+html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
 </style>
 </head>
 <body>
-<button id="memo-fab"
-    onclick="document.getElementById('memo-drawer').classList.toggle('open')"
-    title="開啟即將開始備忘錄">📝</button>
-<div id="memo-drawer">
-    <div class="memo-header">
-        <span>📋 即將開始備忘錄</span>
-        <button class="memo-close"
-            onclick="document.getElementById('memo-drawer').classList.toggle('open')">✕</button>
-    </div>
-    <div class="memo-body">{inner_html}</div>
-</div>
-{_COPY_JS}
+<script>
+(function() {{
+    var p = window.parent.document;
+
+    // 避免重複注入
+    if (p.getElementById('_memo_style')) {{
+        // 已存在：只更新內容
+        var bodyEl = p.getElementById('memo-body-inner');
+        if (bodyEl) bodyEl.innerHTML = buildInner();
+        return;
+    }}
+
+    // ── 注入 CSS ──
+    var style = p.createElement('style');
+    style.id = '_memo_style';
+    style.textContent = `
+        #memo-fab {{
+            position: fixed !important; bottom: 24px !important; right: 24px !important;
+            z-index: 99999 !important; width: 52px; height: 52px; border-radius: 12px;
+            background: #fff; border: 2px solid #222; box-shadow: 3px 3px 0px #111;
+            cursor: pointer; font-size: 22px; display: flex !important;
+            align-items: center; justify-content: center;
+            transition: all 0.15s ease;
+        }}
+        #memo-fab:hover {{ background: #f0f4ff; transform: translate(-1px,-1px); }}
+        #memo-drawer {{
+            position: fixed !important; top: 0 !important; right: 0 !important;
+            width: 360px; height: 100vh; background: #fff;
+            border-left: 2px solid #222; box-shadow: -6px 0 24px rgba(0,0,0,0.18);
+            z-index: 99998 !important; transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex; flex-direction: column; overflow: hidden;
+            font-family: sans-serif;
+        }}
+        #memo-drawer.memo-open {{ transform: translateX(0) !important; }}
+        .memo-header {{
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; border-bottom: 2px solid #222;
+            font-weight: 900; font-size: 1em; background: #f8f9fa; flex-shrink: 0;
+        }}
+        .memo-close {{
+            width: 32px; height: 32px; border: 2px solid #222; border-radius: 6px;
+            background: #fff; cursor: pointer; font-size: 15px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 2px 2px 0 #111; font-weight: 900; padding: 0;
+        }}
+        #memo-body-inner {{ flex:1; overflow-y:auto; padding:12px 14px; background:#fafafa; }}
+        .memo-empty {{ color:#aaa; text-align:center; padding:48px 0; font-size:0.95em; }}
+        .memo-group {{ margin-bottom:12px; border:2px solid #222; border-radius:8px; overflow:hidden; background:#fff; }}
+        .memo-group-header {{
+            display:flex; align-items:center; justify-content:space-between;
+            background:#f0f0f0; padding:8px 12px; font-weight:800; font-size:0.9em;
+            border-bottom:1px solid #ddd;
+        }}
+        .memo-row {{
+            display:flex; align-items:center; justify-content:space-between;
+            padding:8px 12px; border-bottom:1px solid #eee; gap:8px;
+        }}
+        .memo-row:last-child {{ border-bottom:none; }}
+        .memo-match {{ flex:1; color:#333; font-size:0.85em; line-height:1.5; font-family:"SF Mono","Fira Code",monospace; }}
+        .memo-copy-btn {{
+            flex-shrink:0; width:28px; height:28px; border:1.5px solid #bbb;
+            border-radius:5px; background:#f8f9fa; cursor:pointer; font-size:13px;
+            display:inline-flex; align-items:center; justify-content:center; padding:0;
+            box-shadow:1px 1px 0 #ccc; transition:all 0.1s;
+        }}
+        .memo-copy-btn:hover {{ background:#e8f0fe; border-color:#4a90d9; }}
+    `;
+    p.head.appendChild(style);
+
+    // ── 複製函數（注入到 parent window）──
+    if (!window.parent._memoCopy) {{
+        window.parent._execCopy = function(text, cb) {{
+            var ta = p.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
+            p.body.appendChild(ta);
+            ta.focus(); ta.select();
+            try {{ p.execCommand('copy'); if(cb) cb(); }} catch(e) {{}}
+            p.body.removeChild(ta);
+        }};
+        window.parent._memoCopy = function(text, btnEl) {{
+            var prev = btnEl.textContent;
+            function ok() {{
+                btnEl.textContent = '✅';
+                btnEl.style.background = '#22c55e';
+                btnEl.style.borderColor = '#22c55e';
+                btnEl.style.color = '#fff';
+                setTimeout(function() {{
+                    btnEl.textContent = prev;
+                    btnEl.style.cssText = '';
+                }}, 2000);
+            }}
+            if (navigator.clipboard && navigator.clipboard.writeText) {{
+                navigator.clipboard.writeText(text).then(ok).catch(function(){{ window.parent._execCopy(text, ok); }});
+            }} else {{
+                window.parent._execCopy(text, ok);
+            }}
+        }};
+    }}
+
+    function buildInner() {{
+        var groups = {memo_data_json};
+        if (!groups || groups.length === 0) {{
+            return "<div class='memo-empty'>📭 目前無即將開始的比賽</div>";
+        }}
+        var html = '';
+        groups.forEach(function(g) {{
+            var groupCopy = g.groupCopy;
+            var rowsHtml = g.matches.map(function(m) {{
+                return "<div class='memo-row'>" +
+                    "<span class='memo-match'>" + m.text + "</span>" +
+                    "<button class='memo-copy-btn' onclick=\"window.parent._memoCopy(" + JSON.stringify(m.copy) + ", this)\">📋</button>" +
+                    "</div>";
+            }}).join('');
+            html += "<div class='memo-group'>" +
+                "<div class='memo-group-header'>" +
+                    "<span>" + g.icon + " " + g.league + "</span>" +
+                    "<button class='memo-copy-btn' onclick=\"window.parent._memoCopy(" + JSON.stringify(groupCopy) + ", this)\">📋</button>" +
+                "</div>" +
+                "<div>" + rowsHtml + "</div>" +
+                "</div>";
+        }});
+        return html;
+    }}
+
+    // ── 建立 FAB 按鈕 ──
+    var fab = p.createElement('button');
+    fab.id = 'memo-fab';
+    fab.title = '即將開始備忘錄';
+    fab.textContent = '📝';
+    fab.onclick = function() {{
+        p.getElementById('memo-drawer').classList.toggle('memo-open');
+    }};
+    p.body.appendChild(fab);
+
+    // ── 建立抽屜 ──
+    var drawer = p.createElement('div');
+    drawer.id = 'memo-drawer';
+    drawer.innerHTML =
+        "<div class='memo-header'>" +
+            "<span>📋 即將開始備忘錄</span>" +
+            "<button class='memo-close' id='memo-close-btn'>✕</button>" +
+        "</div>" +
+        "<div id='memo-body-inner'></div>";
+    p.body.appendChild(drawer);
+
+    p.getElementById('memo-close-btn').onclick = function() {{
+        p.getElementById('memo-drawer').classList.remove('memo-open');
+    }};
+
+    p.getElementById('memo-body-inner').innerHTML = buildInner();
+}})();
+</script>
 </body>
 </html>"""
-    return html, 60
 
 
 def get_table_html(title, data_list):
