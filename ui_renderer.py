@@ -151,7 +151,7 @@ def get_memo_html(league_data):
             s.id = 'memo-style';
             s.textContent = `
                 #memo-fab {{
-                    position:fixed; top:58px; right:18px; z-index:99999;
+                    position:fixed; top:59px; right:18px; z-index:99999;
                     width:44px; height:44px; border-radius:10px;
                     background:#fff; border:2px solid #222; box-shadow:3px 3px 0px #111;
                     cursor:pointer; font-size:20px; display:flex;
