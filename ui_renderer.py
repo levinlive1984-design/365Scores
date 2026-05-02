@@ -3,12 +3,7 @@ import streamlit as st
 def setup_cyber_css():
     st.markdown("""
         <style>
-            /* 👇 加入這一段來強制縮窄側邊欄 👇 */
-            [data-testid="stSidebar"] {
-                min-width: 170px !important;
-                max-width: 170px !important;
-                width: 170px !important;
-            }
+          
             
             
             .block-container { padding-top: 4rem !important; }
