@@ -10,7 +10,17 @@ def setup_cyber_css():
                 width: 170px !important;
             }
             
-            
+            /* Toggle 開關旁的文字 */
+            div[data-testid="stToggle"] label p {
+                font-size: 0.75rem !important;  /* ← 改這裡 */
+             }
+
+             /* 緊急重置看板 按鈕文字 */
+             div[data-testid="stButton"] button p {
+                 font-size: 0.75rem !important;  /* ← 改這裡 */
+             }
+             
+             
             .block-container { padding-top: 4rem !important;
             padding-left: 1.5rem !important; 
             padding-right: 1.5rem !important; 
