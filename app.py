@@ -106,9 +106,8 @@ if active_leagues:
         unsafe_allow_html=True
     )
 
-    # ── 備忘錄浮動抽屜（注入主頁面 DOM）──
-    memo_html, memo_h = get_memo_html(league_data)
-    components.html(memo_html, height=memo_h, scrolling=False)
+    # ── 備忘錄浮動抽屜：inject 到主頁面 DOM（固定懸浮，不隨捲軸移動）──
+    components.html(get_memo_html(league_data), height=0, scrolling=False)
 
     with scoreboard_container:
         num_cols = min(len(active_leagues), 3)
