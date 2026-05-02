@@ -27,7 +27,7 @@ def setup_cyber_css():
             [data-testid="stSidebar"] .stButton > button {
                 background: transparent !important; border: none !important; box-shadow: none !important;
                 color: #d32f2f !important; font-weight: 900 !important; font-size: 0.5em !important;
-                letter-spacing: 1px !important; display: flex !important; align-items: center !important;
+                letter-spacing: 0px !important; display: flex !important; align-items: center !important;
                 justify-content: flex-start !important; padding: 5px 0 !important; transition: all 0.2s ease !important;
             }
             [data-testid="stSidebar"] .stButton > button:hover { color: #ff0000 !important; transform: translateX(4px); }
