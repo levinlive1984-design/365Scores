@@ -356,7 +356,10 @@ def get_table_html(title, data_list):
         copy_btn = ''
         copy_script = ''
 
-    if not data_list:
+    if data_list is None:
+        body = f'<div class="tab-label">{title}</div><div class="card-empty">⏳ 數據鏈路異常，等待重新連線...</div>'
+        est_height = 120
+    elif not data_list:
         body = f'<div class="tab-label">{title}</div><div class="card-empty">📡 該日期暫無賽事數據，鏈路待命。</div>'
         est_height = 120
     else:
