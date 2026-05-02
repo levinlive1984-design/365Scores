@@ -26,7 +26,7 @@ def setup_cyber_css():
             [data-stale="true"] { opacity: 0.1 !important; transition: opacity 0.2s ease-in-out !important; }
             [data-testid="stSidebar"] .stButton > button {
                 background: transparent !important; border: none !important; box-shadow: none !important;
-                color: #d32f2f !important; font-weight: 900 !important; font-size: 0.8em !important;
+                color: #d32f2f !important; font-weight: 900 !important; font-size: 0.7em !important;
                 letter-spacing: 1px !important; display: flex !important; align-items: center !important;
                 justify-content: flex-start !important; padding: 5px 0 !important; transition: all 0.2s ease !important;
             }
