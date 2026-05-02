@@ -1,6 +1,21 @@
 import streamlit as st
 
 def setup_cyber_css():
+    # Toggle 標籤文字大小
+    st.markdown("""
+    <style>
+    /* Toggle 開關旁的文字 */
+    div[data-testid="stToggle"] label p {
+        font-size: 1.2rem !important;  /* ← 改這裡 */
+    }
+
+    /* 緊急重置看板 按鈕文字 */
+    div[data-testid="stButton"] button p {
+        font-size: 1.2rem !important;  /* ← 改這裡 */
+    }
+    </style>
+    """, unsafe_allow_html=True)    
+    
     st.markdown("""
         <style>
             /* 只有在側邊欄展開時，才強制縮窄為 170px */
@@ -9,18 +24,7 @@ def setup_cyber_css():
                 max-width: 170px !important;
                 width: 170px !important;
             }
-            
-            /* Toggle 開關旁的文字 */
-            div[data-testid="stToggle"] label p {
-                font-size: 0.75rem !important;  /* ← 改這裡 */
-             }
-
-             /* 緊急重置看板 按鈕文字 */
-             div[data-testid="stButton"] button p {
-                 font-size: 0.75rem !important;  /* ← 改這裡 */
-             }
-             
-             
+                       
             .block-container { padding-top: 4rem !important;
             padding-left: 1.5rem !important; 
             padding-right: 1.5rem !important; 
