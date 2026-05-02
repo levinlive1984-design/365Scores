@@ -1,6 +1,16 @@
 import streamlit as st
 
 def setup_cyber_css():
+    /* 讓主內容區淡入，避免硬閃爍 */
+    [data-testid="stMainBlockContainer"] {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0.4; }
+        to   { opacity: 1; }
+    }
+    
     # Toggle 標籤文字大小
     st.markdown("""
     <style>
