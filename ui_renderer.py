@@ -389,9 +389,8 @@ def get_table_html(title, data_list):
                 status_box = f"<span class='status-pre'>{row['Status']}</span>"
             vs_span = "<span class='vs'>VS</span>"
             serving = row.get('Serving', '')
-            serve_dot = "<span class='serve-dot'></span>"
-            away_name = row['Away'] + (serve_dot if serving == 'away' else '')
-            home_name = row['Home'] + (serve_dot if serving == 'home' else '')
+            away_name = f"<span class='serving-highlight'>{row['Away']}</span>" if serving == 'away' else row['Away']
+            home_name = f"<span class='serving-highlight'>{row['Home']}</span>" if serving == 'home' else row['Home']
             match_text = f"{away_name} {vs_span} {home_name}"
             match_url = row.get('URL', '')
             if match_url:
@@ -470,10 +469,9 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
         .status-post {{ background: #eee; color: #777; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; }}
         .status-pre  {{ background: #e6f4ea; color: #1e7e34; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; font-weight: 600; }}
         .vs {{ color: #dc3545; font-weight: 900; font-size: 0.8em; margin: 0 4px; }}
-        .serve-dot {{
-            display: inline-block; width: 0; height: 0;
-            border-top: 5px solid transparent; border-bottom: 5px solid transparent;
-            border-right: 8px solid #22c55e; margin: 0 4px; vertical-align: middle;
+        .serving-highlight {{
+            background: #dcfce7; border-radius: 3px; padding: 1px 5px;
+            color: #166534; font-weight: 600;
         }}
         .match-link {{ color: inherit; text-decoration: none; }}
         .match-link:hover {{ color: #1a73e8; }}
