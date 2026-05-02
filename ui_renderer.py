@@ -25,7 +25,7 @@ def setup_cyber_css():
                 width: 170px !important;
             }
                        
-            .block-container { padding-top: 4rem !important;
+            .block-container { padding-top: 2rem !important;
             padding-left: 1.5rem !important; 
             padding-right: 1.5rem !important; 
             }
