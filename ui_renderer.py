@@ -357,9 +357,9 @@ function toggleMemo() {{
 }}
 
 function copyMemo(text, btnId) {{
-    navigator.clipboard.writeText(text).then(function() {{
-        var b = document.getElementById(btnId);
-        var prev = b.textContent;
+    var b = document.getElementById(btnId);
+    var prev = b.textContent;
+    function onSuccess() {{
         b.textContent = '✅';
         b.style.background = '#22c55e';
         b.style.borderColor = '#22c55e';
@@ -370,7 +370,26 @@ function copyMemo(text, btnId) {{
             b.style.borderColor = '';
             b.style.color = '';
         }}, 2000);
-    }});
+    }}
+    // 優先用 clipboard API，不支援時 fallback 到 execCommand
+    if (navigator.clipboard && navigator.clipboard.writeText) {{
+        navigator.clipboard.writeText(text).then(onSuccess).catch(function() {{
+            _execCopy(text, onSuccess);
+        }});
+    }} else {{
+        _execCopy(text, onSuccess);
+    }}
+}}
+function _execCopy(text, cb) {{
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {{ document.execCommand('copy'); cb(); }} catch(e) {{}}
+    document.body.removeChild(ta);
 }}
 </script>
 """
@@ -391,10 +410,21 @@ def get_table_html(title, data_list):
         copy_btn = f'<button id="{btn_id}" class="copy-btn">📋</button>'
         copy_script = f"""
         <script>
+        function _execCopy(text, cb) {{
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {{ document.execCommand('copy'); cb(); }} catch(e) {{}}
+            document.body.removeChild(ta);
+        }}
         document.getElementById('{btn_id}').onclick = function() {{
             var text = {copy_text_json};
-            navigator.clipboard.writeText(text).then(function() {{
-                var b = document.getElementById('{btn_id}');
+            var b = document.getElementById('{btn_id}');
+            function onSuccess() {{
                 b.textContent = '✅';
                 b.style.background = '#22c55e';
                 b.style.color = '#fff';
@@ -403,7 +433,14 @@ def get_table_html(title, data_list):
                     b.style.background = '#f8f9fa';
                     b.style.color = '#333';
                 }}, 2000);
-            }});
+            }}
+            if (navigator.clipboard && navigator.clipboard.writeText) {{
+                navigator.clipboard.writeText(text).then(onSuccess).catch(function() {{
+                    _execCopy(text, onSuccess);
+                }});
+            }} else {{
+                _execCopy(text, onSuccess);
+            }}
         }};
         </script>
         """
