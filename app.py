@@ -6,7 +6,6 @@ import time
 try:
     from streamlit_autorefresh import st_autorefresh
 except ModuleNotFoundError:
-    # fallback for environments without the extra package
     def st_autorefresh(interval=10000, key=None):
         import time
         time.sleep(interval / 1000)
@@ -14,7 +13,7 @@ except ModuleNotFoundError:
 
 # --- 核心模組匯入 ---
 from api365_utils import get_365_scoreboard
-from ui_renderer import setup_cyber_css, get_table_html
+from ui_renderer import setup_cyber_css, get_table_html, get_memo_html
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="365賽程抓爬網", layout="wide", initial_sidebar_state="expanded")
@@ -79,7 +78,7 @@ with st.sidebar:
 scoreboard_container = st.container()
 
 if active_leagues:
-    time_bucket = math.floor(time.time() / 10)  # 每 10 秒產生新 key，強制快取失效
+    time_bucket = math.floor(time.time() / 10)
     league_data = fetch_league_data(tuple(active_leagues), selected_date, time_bucket)
 
     # 智慧判斷是否有 live game
@@ -93,7 +92,7 @@ if active_leagues:
     refresh_ms = 10000 if is_live else 60000
     st_autorefresh(interval=refresh_ms, key="smart_live_refresh")
 
-    # 時間戳移至側邊欄最底部，精緻小字版
+    # 時間戳移至側邊欄最底部
     dot_color = "#22c55e" if is_live else "#94a3b8"
     st.sidebar.markdown(
         f"<div style='position:fixed; bottom:14px; left:0; width:230px; padding: 0 18px;'>"
@@ -106,6 +105,9 @@ if active_leagues:
         f"</span></div>",
         unsafe_allow_html=True
     )
+
+    # ── 備忘錄浮動抽屜（注入主頁面 DOM）──
+    st.markdown(get_memo_html(league_data), unsafe_allow_html=True)
 
     with scoreboard_container:
         num_cols = min(len(active_leagues), 3)
@@ -129,14 +131,11 @@ if active_leagues:
             col_assignments[shortest_col_idx].append(league)
             col_heights[shortest_col_idx] += est_height
 
-        # 只重畫比分區塊
         for i in range(num_cols):
             with cols[i]:
                 for league in col_assignments[i]:
                     icon = "🏀" if league == "NBA" else "🎾" if league == "Tennis" else "🏒" if league == "NHL" else "⚾"
                     html_content, est_height = get_table_html(f"{icon} {league}", league_data[league])
                     components.html(html_content, height=est_height, scrolling=True)
-
-                    # 舊的 st.button 複製邏輯已移除，複製按鈕已內嵌於頁籤中
 else:
     st.warning("📡 請由左側面板啟動賽事數據鏈路...")
