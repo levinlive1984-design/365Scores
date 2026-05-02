@@ -3,7 +3,7 @@ import streamlit as st
 def setup_cyber_css():
     st.markdown("""
         <style>
-            .block-container { padding-top: 4rem !important; }
+            .block-container { padding-top: 6rem !important; }
             [data-testid="stSidebar"] > div:first-child { padding: 1rem 0.7rem 1rem 0.7rem !important; }
             [data-testid="stSidebar"] h2 { font-size: 0.95em !important; margin-bottom: 0.3rem !important; }
             [data-testid="stSidebar"] h3 { font-size: 0.8em !important; margin-bottom: 0.2rem !important; color: #888 !important; letter-spacing: 0.05em !important; }
