@@ -317,9 +317,35 @@ def get_table_html(title, data_list):
     btn_id = "cpbtn_" + _re.sub(r'[^a-zA-Z0-9]', '_', title)
 
     if pre_rows:
-        copy_btn = f'<button id="{btn_id}" class="copy-btn" onclick=\'doCopy({copy_text_json}, "{btn_id}")\'>📋</button>'
+        copy_btn = f'<button id="{btn_id}" class="copy-btn" onclick="_cp(this,{copy_text_json})">&#128203;</button>'
+        copy_script = f"""<script>
+function _cp(btn, text) {{
+    var prev = btn.innerHTML;
+    function ok() {{
+        btn.innerHTML = '&#9989;';
+        btn.style.background = '#22c55e';
+        btn.style.color = '#fff';
+        setTimeout(function() {{
+            btn.innerHTML = prev;
+            btn.style.background = '';
+            btn.style.color = '';
+        }}, 2000);
+    }}
+    if (navigator.clipboard && navigator.clipboard.writeText) {{
+        navigator.clipboard.writeText(text).then(ok).catch(function() {{ _ec(text, ok); }});
+    }} else {{ _ec(text, ok); }}
+}}
+function _ec(text, cb) {{
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try {{ document.execCommand('copy'); if(cb) cb(); }} catch(e) {{}}
+    document.body.removeChild(ta);
+}}
+</script>"""
     else:
         copy_btn = ''
+        copy_script = ''
 
     if not data_list:
         body = f"""
@@ -452,7 +478,7 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
         .copy-btn:active {{ box-shadow: 0 0 0 #111; transform: translate(2px,2px); }}
     </style>
     {body}
-    {_COPY_JS}
+    {copy_script}
     {auto_height_script}
     """
     return full_html, est_height + 80
