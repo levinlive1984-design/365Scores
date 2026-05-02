@@ -191,4 +191,4 @@ def get_365_scoreboard(league_type, target_date):
             })
         return parsed_data
     except Exception:
-        return []
+        return None  # None = 抓取失敗，[] = 真的沒賽事
