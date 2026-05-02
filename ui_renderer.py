@@ -6,12 +6,12 @@ def setup_cyber_css():
     <style>
     /* Toggle 開關旁的文字 */
     div[data-testid="stToggle"] label p {
-        font-size: 1.2rem !important;  /* ← 改這裡 */
+        font-size: 0.75rem !important;  /* ← 改這裡 */
     }
 
     /* 緊急重置看板 按鈕文字 */
     div[data-testid="stButton"] button p {
-        font-size: 1.2rem !important;  /* ← 改這裡 */
+        font-size: 0.75rem !important;  /* ← 改這裡 */
     }
     </style>
     """, unsafe_allow_html=True)    
