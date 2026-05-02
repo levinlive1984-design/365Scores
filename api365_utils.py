@@ -87,12 +87,12 @@ def get_365_scoreboard(league_type, target_date):
                 state = 'in'
                 period = game.get('statusText', '')
                 # 棒球沒有倒數時鐘，gameTimeDisplay 是投球數，不顯示
-    baseball_leagues = {'mlb', 'npb', 'kbo'}
-    if league_type not in baseball_leagues:
-        clock_str = game.get('gameTimeDisplay', '')
-        status_text = f"{period} {clock_str}".strip() if clock_str else period
-    else:
-        status_text = period  # 只顯示 "第六局"
+                baseball_leagues = {'mlb', 'npb', 'kbo'}
+                if league_type not in baseball_leagues:
+                    clock_str = game.get('gameTimeDisplay', '')
+                    status_text = f"{period} {clock_str}".strip() if clock_str else period
+                else:
+                    status_text = period  # 只顯示 "第六局"
                 
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
