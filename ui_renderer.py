@@ -439,9 +439,9 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
         thead tr {{ background: #f4f4f4; border-bottom: 2px solid #222; }}
         th {{ text-align: left; padding: 10px 12px; font-size: 0.88em; color: #555; font-weight: 600; }}
         td {{ padding: 10px 12px; font-size: 0.93em; vertical-align: middle; }}
-        .col-time {{ width: 14%; white-space: nowrap; }}
+        .col-time {{ width: 14%; white-space: nowrap; font-size: 0.75em;}}
         .col-status {{ width: 20%; }}
-        .col-match {{ width: 46%; }}
+        .col-match {{ width: 46%; font-size: 0.75em;}}
         .col-score {{ width: 20%; font-weight: 700; font-size: 1.0em; white-space: nowrap; }}
         tr.league-header td {{
             background: #e9ecef; font-weight: 700; color: #222;
