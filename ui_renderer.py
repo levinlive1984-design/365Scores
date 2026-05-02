@@ -145,7 +145,7 @@ def get_memo_html(league_data):
                 }}
                 .memo-close:active {{ box-shadow:0 0 0; transform:translate(2px,2px); }}
                 .memo-body {{
-                    flex:1; overflow-y:auto; padding:65px 12px 12px 12px;
+                    flex:1; overflow-y:auto; padding:50px 12px 12px 12px;
                     background:#fafafa; box-sizing:border-box;
                 }}
                 .memo-empty {{ color:#aaa; text-align:center; padding:48px 0; font-size:0.95em; }}
