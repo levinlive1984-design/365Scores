@@ -70,7 +70,6 @@ def get_365_scoreboard(league_type, target_date):
                     continue
                     
                 # 重組分類橫桿名稱：捨棄後面的 " - Round of 16" 等贅字
-                # 組合出乾淨俐落的 "ATP - Madrid"
                 raw_name = game.get('competitionDisplayName', '網球賽事')
                 clean_name = raw_name.split(' - ')[0] 
                 league_display_name = f"{tour_type} - {clean_name}"
@@ -85,10 +84,18 @@ def get_365_scoreboard(league_type, target_date):
                 state, status_text = 'post', "已結束"
             elif status_group == 3:
                 state = 'in'
-                period = game.get('statusText', '')       # → "第六局"
-                clock_str = game.get('gameTimeDisplay', '') # → "60" ← 問題在這！
-                status_text = f"{period} {clock_str}".strip()
-                
+                period = game.get('statusText', '')
+                # 棒球沒有倒數時鐘，gameTimeDisplay 是投球數，不顯示
+                baseball_leagues = {'mlb', 'npb', 'kbo'}
+                if league_type not in baseball_leagues:
+                    clock_str = game.get('gameTimeDisplay', '')
+                    status_text = f"{period} {clock_str}".strip() if clock_str else period
+                else:
+                    status_text = period  # 棒球只顯示局數，例如「第六局」
+            else:
+                # 賽前（statusGroup = 1 或其他）
+                state, status_text = 'pre', game.get('statusText', '即將開始')
+
             home = game.get('homeCompetitor', {})
             away = game.get('awayCompetitor', {})
             
@@ -144,6 +151,32 @@ def get_365_scoreboard(league_type, target_date):
             # 日期格式：M/D，例如 5/2
             date_display = target_date.strftime('%-m/%-d') if hasattr(target_date, 'strftime') else str(target_date)
 
+            # 比分處理：-1 代表 API 無資料，tennis 已結束時從 stages 算盤數
+            away_s = away.get('score', -1)
+            home_s = home.get('score', -1)
+
+            if league_type == 'tennis' and state == 'post' and (int(away_s) < 0 or int(home_s) < 0):
+                # 從 stages 逐盤判斷勝負，加總盤數
+                away_sets = 0
+                home_sets = 0
+                for stage in game.get('stages', []):
+                    sid = stage.get('id')
+                    if sid in (34, 35):
+                        continue
+                    h = stage.get('homeCompetitorScore', -1)
+                    a = stage.get('awayCompetitorScore', -1)
+                    if h < 0 or a < 0:
+                        continue
+                    if int(h) > int(a):
+                        home_sets += 1
+                    elif int(a) > int(h):
+                        away_sets += 1
+                score_display = f"{away_sets} - {home_sets}" if (away_sets + home_sets) > 0 else "-"
+            elif int(away_s) < 0 or int(home_s) < 0:
+                score_display = "-"
+            else:
+                score_display = f"{int(away_s)} - {int(home_s)}{extra_score}"
+
             parsed_data.append({
                 "League": league_display_name,
                 "Date": date_display,
@@ -153,7 +186,7 @@ def get_365_scoreboard(league_type, target_date):
                 "Away": away.get('name', 'TBD'),
                 "Home": home.get('name', 'TBD'),
                 "Serving": serving,
-                "Score": f"{int(away.get('score', 0))} - {int(home.get('score', 0))}{extra_score}" if state != 'pre' else "-",
+                "Score": score_display if state != 'pre' else "-",
                 "URL": match_url
             })
         return parsed_data
