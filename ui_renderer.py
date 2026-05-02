@@ -11,8 +11,6 @@ def setup_cyber_css():
                 padding: 1rem 0.7rem 1rem 0.7rem !important;
             }
 
-            
-
             /* 標題縮小 */
             [data-testid="stSidebar"] h2 {
                 font-size: 0.95em !important;
@@ -67,12 +65,11 @@ def setup_cyber_css():
             }
             
             /* 🔴 緊急重置開關：實體工業風 (Kill Switch) */
-            /* 1. 消除 Streamlit 預設按鈕外觀，設定文字樣式 */
             [data-testid="stSidebar"] .stButton > button {
                 background: transparent !important;
                 border: none !important;
                 box-shadow: none !important;
-                color: #d32f2f !important; /* 警告紅文字 */
+                color: #d32f2f !important;
                 font-weight: 900 !important;
                 font-size: 0.8em !important;
                 letter-spacing: 1px !important;
@@ -82,14 +79,10 @@ def setup_cyber_css():
                 padding: 5px 0 !important;
                 transition: all 0.2s ease !important;
             }
-
-            /* 2. 滑鼠懸浮時文字微動，增加操作手感 */
             [data-testid="stSidebar"] .stButton > button:hover {
                 color: #ff0000 !important;
                 transform: translateX(4px);
             }
-
-            /* 3. 繪製獨立的「黑框白底紅圈」硬體按鈕圖示 */
             [data-testid="stSidebar"] .stButton > button::before {
                 content: '🔴';
                 display: flex;
@@ -97,22 +90,20 @@ def setup_cyber_css():
                 justify-content: center;
                 width: 32px;
                 height: 32px;
-                border: 2px solid #111;       /* 粗黑外框 */
-                border-radius: 6px;           /* 微圓角 */
-                background-color: #f8f9fa;    /* 淺灰白底色 */
-                margin-right: 12px;           /* 與文字的距離 */
+                border: 2px solid #111;
+                border-radius: 6px;
+                background-color: #f8f9fa;
+                margin-right: 12px;
                 font-size: 12px;
-                box-shadow: 3px 3px 0px #111; /* 賽博風無機質硬陰影 */
+                box-shadow: 3px 3px 0px #111;
                 transition: all 0.1s ease;
             }
-
-            /* 4. 按下時的物理回饋 (按鈕被壓下去的感覺) */
             [data-testid="stSidebar"] .stButton > button:active::before {
                 box-shadow: 0px 0px 0px #111;
                 transform: translate(3px, 3px);
             }
 
-            /* 5. 比賽列 hover 效果（純 CSS，避開 Streamlit JS 沙盒限制）*/
+            /* 比賽列 hover 效果 */
             tr.match-row:hover {
                 background-color: #eef4ff !important;
                 cursor: pointer;
@@ -122,6 +113,268 @@ def setup_cyber_css():
             }
         </style>
     """, unsafe_allow_html=True)
+
+
+def get_memo_html(league_data):
+    """
+    生成浮動備忘錄抽屜 HTML（浮動按鈕 + 右側滑入抽屜）。
+    透過 st.markdown(..., unsafe_allow_html=True) 注入主頁面 DOM。
+    """
+    import json, re as _re
+
+    LEAGUE_ICONS = {
+        "NBA": "🏀", "MLB": "⚾", "NHL": "🏒",
+        "NPB": "⚾", "KBO": "⚾", "Tennis": "🎾"
+    }
+
+    # ── 收集各板塊即將開始的比賽，依板塊分群 ──
+    groups = []
+    for league, rows in league_data.items():
+        pre_rows = [r for r in rows if r.get('State') == 'pre']
+        if pre_rows:
+            icon = LEAGUE_ICONS.get(league, '🏟️')
+            groups.append((league, icon, pre_rows))
+
+    # ── 產生抽屜內容 ──
+    if not groups:
+        inner_html = "<div class='memo-empty'>📭 目前無即將開始的比賽</div>"
+    else:
+        inner_html = ""
+        for league, icon, pre_rows in groups:
+            # 整組複製文字
+            group_lines = [
+                f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
+                for r in pre_rows
+            ]
+            group_text_json = json.dumps("\n".join(group_lines))
+            group_btn_id = "grp_" + _re.sub(r'[^a-zA-Z0-9]', '_', league)
+
+            # 個別比賽列
+            rows_html = ""
+            for i, r in enumerate(pre_rows):
+                line = f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
+                line_json = json.dumps(line)
+                row_btn_id = f"row_{_re.sub(r'[^a-zA-Z0-9]', '_', league)}_{i}"
+                rows_html += f"""
+                <div class='memo-row'>
+                    <span class='memo-match'>{r.get('Date','')} {r['Time']}&nbsp;&nbsp;{r['Away']} vs {r['Home']}</span>
+                    <button class='memo-copy-btn' id='{row_btn_id}'
+                        onclick='copyMemo({line_json}, "{row_btn_id}")'>📋</button>
+                </div>"""
+
+            inner_html += f"""
+            <div class='memo-group'>
+                <div class='memo-group-header'>
+                    <span>{icon} {league}</span>
+                    <button class='memo-copy-btn' id='{group_btn_id}'
+                        onclick='copyMemo({group_text_json}, "{group_btn_id}")'>📋</button>
+                </div>
+                <div class='memo-group-body'>{rows_html}</div>
+            </div>"""
+
+    return f"""
+<style>
+/* ── 浮動按鈕 ── */
+#memo-fab {{
+    position: fixed;
+    top: 58px;
+    right: 18px;
+    z-index: 9999;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #fff;
+    border: 2px solid #222;
+    box-shadow: 3px 3px 0px #111;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+}}
+#memo-fab:hover {{
+    background: #f0f4ff;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px #111;
+}}
+
+/* ── 右側抽屜 ── */
+#memo-drawer {{
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 360px;
+    height: 100vh;
+    background: #fff;
+    border-left: 2px solid #222;
+    box-shadow: -6px 0 24px rgba(0,0,0,0.13);
+    z-index: 9998;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}}
+#memo-drawer.open {{
+    transform: translateX(0);
+}}
+
+/* ── 抽屜標頭 ── */
+.memo-header {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 2px solid #222;
+    font-weight: 900;
+    font-size: 1.0em;
+    letter-spacing: 0.5px;
+    background: #f8f9fa;
+    flex-shrink: 0;
+}}
+.memo-close {{
+    width: 32px;
+    height: 32px;
+    border: 2px solid #222;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 2px 2px 0px #111;
+    transition: all 0.1s ease;
+    font-weight: 900;
+    padding: 0;
+}}
+.memo-close:active {{
+    box-shadow: 0 0 0 #111;
+    transform: translate(2px, 2px);
+}}
+
+/* ── 抽屜內容 ── */
+.memo-body {{
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    background: #fafafa;
+}}
+.memo-empty {{
+    color: #aaa;
+    text-align: center;
+    padding: 48px 0;
+    font-size: 0.95em;
+}}
+
+/* ── 板塊群組 ── */
+.memo-group {{
+    margin-bottom: 12px;
+    border: 2px solid #222;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.06);
+}}
+.memo-group-header {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f0f0f0;
+    padding: 8px 12px;
+    font-weight: 800;
+    font-size: 0.9em;
+    border-bottom: 1px solid #ddd;
+    letter-spacing: 0.3px;
+}}
+
+/* ── 比賽列 ── */
+.memo-row {{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    gap: 8px;
+}}
+.memo-row:last-child {{
+    border-bottom: none;
+}}
+.memo-match {{
+    flex: 1;
+    color: #333;
+    font-size: 0.86em;
+    line-height: 1.5;
+    font-family: "SF Mono", "Fira Code", monospace;
+}}
+
+/* ── 複製按鈕（共用） ── */
+.memo-copy-btn {{
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border: 1.5px solid #bbb;
+    border-radius: 5px;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s ease;
+    padding: 0;
+    box-shadow: 1px 1px 0px #ccc;
+}}
+.memo-copy-btn:hover {{
+    background: #e8f0fe;
+    border-color: #4a90d9;
+}}
+.memo-copy-btn:active {{
+    transform: scale(0.92);
+    box-shadow: none;
+}}
+</style>
+
+<!-- 浮動按鈕 -->
+<button id="memo-fab" onclick="toggleMemo()" title="開啟即將開始備忘錄">📝</button>
+
+<!-- 右側抽屜 -->
+<div id="memo-drawer">
+    <div class="memo-header">
+        <span>📋 即將開始備忘錄</span>
+        <button class="memo-close" onclick="toggleMemo()" title="關閉">✕</button>
+    </div>
+    <div class="memo-body">
+        {inner_html}
+    </div>
+</div>
+
+<script>
+function toggleMemo() {{
+    document.getElementById('memo-drawer').classList.toggle('open');
+}}
+
+function copyMemo(text, btnId) {{
+    navigator.clipboard.writeText(text).then(function() {{
+        var b = document.getElementById(btnId);
+        var prev = b.textContent;
+        b.textContent = '✅';
+        b.style.background = '#22c55e';
+        b.style.borderColor = '#22c55e';
+        b.style.color = '#fff';
+        setTimeout(function() {{
+            b.textContent = prev;
+            b.style.background = '';
+            b.style.borderColor = '';
+            b.style.color = '';
+        }}, 2000);
+    }});
+}}
+</script>
+"""
+
 
 def get_table_html(title, data_list):
     """生成完整獨立 HTML（含 <style>），供 components.html() 使用。
@@ -135,9 +388,7 @@ def get_table_html(title, data_list):
     btn_id = "cpbtn_" + _re.sub(r'[^a-zA-Z0-9]', '_', title)
 
     if pre_rows:
-        copy_btn = (
-            f'<button id="{btn_id}" class="copy-btn">📋</button>'
-        )
+        copy_btn = f'<button id="{btn_id}" class="copy-btn">📋</button>'
         copy_script = f"""
         <script>
         document.getElementById('{btn_id}').onclick = function() {{
@@ -166,7 +417,6 @@ def get_table_html(title, data_list):
         <div class="tab-label">{title}</div>
         <div class="card-empty">📡 該日期暫無賽事數據，鏈路待命。</div>
         """
-        rows_html = ''
         est_height = 120
     else:
         # ── 表格列 ──
@@ -207,7 +457,6 @@ def get_table_html(title, data_list):
 
         num_games = len(data_list)
         num_cats  = len(set(r['League'] for r in data_list))
-        # 每列高度更寬裕，加上頁籤+表頭+底部 padding
         est_height = 60 + 44 + (num_cats * 38) + (num_games * 56) + 24
         body = f"""
         <div class="tab-row">
@@ -227,7 +476,6 @@ def get_table_html(title, data_list):
             </table>
         </div>"""
 
-    # 自動量高腳本：渲染後把實際 scrollHeight 傳給父頁面
     auto_height_script = """
 <script>
 function _reportH() {
@@ -317,6 +565,4 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
     {copy_script}
     {auto_height_script}
     """
-    # est_height 給足夠寬裕的初始值，之後由 JS 動態修正
-    # 用較大係數避免第一幀就截斷
     return full_html, est_height + 80
