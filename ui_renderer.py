@@ -22,7 +22,7 @@ def setup_cyber_css():
         <style>
             /* 讓主內容區淡入，避免硬閃爍 */
             [data-testid="stMainBlockContainer"] {
-                animation: fadeIn 0s ease-in-out;
+                animation: fadeIn 0.1s ease-in-out;
             }
 
             @keyframes fadeIn {
