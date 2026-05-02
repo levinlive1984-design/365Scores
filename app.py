@@ -85,6 +85,7 @@ if active_leagues:
     is_live = any(
         row.get("State") == "in"
         for league_rows in league_data.values()
+        if league_rows  # 跳過 None
         for row in league_rows
     )
 
@@ -118,7 +119,7 @@ if active_leagues:
         col_assignments = [[] for _ in range(num_cols)]
 
         for league in active_leagues:
-            data = league_data[league]
+            data = league_data[league] or []
             num_games = len(data)
 
             if num_games == 0:
