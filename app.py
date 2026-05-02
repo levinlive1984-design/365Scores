@@ -107,7 +107,8 @@ if active_leagues:
     )
 
     # ── 備忘錄浮動抽屜（注入主頁面 DOM）──
-    st.markdown(get_memo_html(league_data), unsafe_allow_html=True)
+    memo_html, memo_h = get_memo_html(league_data)
+    components.html(memo_html, height=memo_h, scrolling=False)
 
     with scoreboard_container:
         num_cols = min(len(active_leagues), 3)
