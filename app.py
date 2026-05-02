@@ -95,7 +95,7 @@ if active_leagues:
     # 時間戳移至側邊欄最底部
     dot_color = "#22c55e" if is_live else "#94a3b8"
     st.sidebar.markdown(
-        f"<div style='position:fixed; bottom:14px; left:0; width:170px; padding: 0 12px;'>"
+        f"<div style='position:fixed; bottom:14px; left:0; width:150px; padding: 0 12px;'>"
         f"<span style='display:inline-flex; align-items:center; gap:6px;"
         f"font-family:\"SF Mono\",\"Fira Code\",monospace; font-size:0.67em;"
         f"color:#94a3b8; letter-spacing:0.04em;'>"
