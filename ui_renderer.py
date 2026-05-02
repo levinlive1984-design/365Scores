@@ -1,43 +1,27 @@
 import streamlit as st
 
 def setup_cyber_css():
-    """賽博龐克 CSS 與優化版的過渡動畫"""
     st.markdown("""
         <style>
             .block-container { padding-top: 4rem !important; }
-
             [data-testid="stSidebar"] > div:first-child {
                 padding: 1rem 0.7rem 1rem 0.7rem !important;
             }
             [data-testid="stSidebar"] h2 { font-size: 0.95em !important; margin-bottom: 0.3rem !important; }
-            [data-testid="stSidebar"] h3 {
-                font-size: 0.8em !important; margin-bottom: 0.2rem !important;
-                color: #888 !important; letter-spacing: 0.05em !important;
-            }
+            [data-testid="stSidebar"] h3 { font-size: 0.8em !important; margin-bottom: 0.2rem !important; color: #888 !important; letter-spacing: 0.05em !important; }
             [data-testid="stSidebar"] .stToggle label { font-size: 0.82em !important; }
             [data-testid="stSidebar"] .stToggle { margin-bottom: 0 !important; padding-bottom: 0 !important; }
             [data-testid="stSidebar"] .stDateInput label { font-size: 0.78em !important; margin-bottom: 0 !important; }
             [data-testid="stSidebar"] .stDateInput input { font-size: 0.82em !important; padding: 4px 8px !important; }
             [data-testid="stSidebar"] hr { margin: 0.4rem 0 !important; }
-
-            .update-timestamp {
-                font-family: 'Courier New', monospace; color: #00FF00;
-                background: #111; padding: 3px 10px; border-radius: 4px;
-                border: 1px solid #00FF00; box-shadow: 0 0 5px rgba(0,255,0,0.3);
-            }
             [data-stale="true"] { opacity: 0.1 !important; transition: opacity 0.2s ease-in-out !important; }
-
             [data-testid="stSidebar"] .stButton > button {
-                background: transparent !important; border: none !important;
-                box-shadow: none !important; color: #d32f2f !important;
-                font-weight: 900 !important; font-size: 0.8em !important;
-                letter-spacing: 1px !important; display: flex !important;
-                align-items: center !important; justify-content: flex-start !important;
-                padding: 5px 0 !important; transition: all 0.2s ease !important;
+                background: transparent !important; border: none !important; box-shadow: none !important;
+                color: #d32f2f !important; font-weight: 900 !important; font-size: 0.8em !important;
+                letter-spacing: 1px !important; display: flex !important; align-items: center !important;
+                justify-content: flex-start !important; padding: 5px 0 !important; transition: all 0.2s ease !important;
             }
-            [data-testid="stSidebar"] .stButton > button:hover {
-                color: #ff0000 !important; transform: translateX(4px);
-            }
+            [data-testid="stSidebar"] .stButton > button:hover { color: #ff0000 !important; transform: translateX(4px); }
             [data-testid="stSidebar"] .stButton > button::before {
                 content: '🔴'; display: flex; align-items: center; justify-content: center;
                 width: 32px; height: 32px; border: 2px solid #111; border-radius: 6px;
@@ -53,55 +37,10 @@ def setup_cyber_css():
     """, unsafe_allow_html=True)
 
 
-# ── 共用複製 JS（在 components.html iframe 內執行，execCommand 不需要剪貼簿權限）──
-_COPY_JS = """
-<script>
-function _execCopy(text, cb) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    try { document.execCommand('copy'); if (cb) cb(); } catch(e) { console.warn('copy failed', e); }
-    document.body.removeChild(ta);
-}
-function doCopy(text, btnId) {
-    var b = document.getElementById(btnId);
-    if (!b) return;
-    var prev = b.textContent;
-    function onSuccess() {
-        b.textContent = '✅';
-        b.style.background = '#22c55e';
-        b.style.borderColor = '#22c55e';
-        b.style.color = '#fff';
-        setTimeout(function() {
-            b.textContent = prev;
-            b.style.background = '';
-            b.style.borderColor = '';
-            b.style.color = '';
-        }, 2000);
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(onSuccess).catch(function() {
-            _execCopy(text, onSuccess);
-        });
-    } else {
-        _execCopy(text, onSuccess);
-    }
-}
-</script>
-"""
-
-
 def get_memo_html(league_data):
     """
-    生成備忘錄 HTML，以 JS inject 方式寫入主頁面 document.body。
-    透過 st.markdown(..., unsafe_allow_html=True) 注入。
-    Streamlit 雖然過濾 <script>，但 <img onerror> trick 可執行 JS，
-    最可靠的做法是用一個隱藏的 components.html iframe 傳訊息給自己。
-    ─── 實際做法：直接把所有 DOM 和 CSS 用 JS 字串動態建立並 inject 到 parent ───
-    回傳純 HTML 字串（給 st.markdown 用）。
+    回傳一段 HTML+JS，透過 components.html(height=0) 執行。
+    利用 window.parent.document 把浮動按鈕與備忘錄抽屜直接注入父頁面 DOM。
     """
     import json, re as _re
 
@@ -110,200 +49,153 @@ def get_memo_html(league_data):
         "NPB": "⚾", "KBO": "⚾", "Tennis": "🎾"
     }
 
+    # ── 收集各板塊「即將開始」的比賽，依板塊分群 ──
     groups = []
     for league, rows in league_data.items():
         pre_rows = [r for r in rows if r.get('State') == 'pre']
         if pre_rows:
-            groups.append((league, LEAGUE_ICONS.get(league, '🏟️'), pre_rows))
+            icon = LEAGUE_ICONS.get(league, '🏟️')
+            groups.append((league, icon, pre_rows))
 
-    # ── 把備忘錄內容序列化成 JSON 傳給 JS ──
-    memo_groups = []
+    # ── 把資料轉成 JSON，在 JS 端渲染，完全避開 Python 字串跳脫地獄 ──
+    groups_json = []
     for league, icon, pre_rows in groups:
-        group_lines = "\n".join(
-            f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
-            for r in pre_rows
-        )
-        matches = [
-            {"text": f"{r.get('Date','')} {r['Time']}  {r['Away']} vs {r['Home']}",
-             "copy": f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"}
-            for r in pre_rows
-        ]
-        memo_groups.append({
-            "league": league,
-            "icon": icon,
-            "groupCopy": group_lines,
-            "matches": matches
-        })
+        games = []
+        for r in pre_rows:
+            line = f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}"
+            games.append(line)
+        groups_json.append({"league": league, "icon": icon, "games": games})
 
-    memo_data_json = json.dumps(memo_groups, ensure_ascii=False)
+    groups_data = json.dumps(groups_json, ensure_ascii=False)
 
-    # ── 整段邏輯放在 components.html iframe 裡，用 postMessage 通知父頁面 ──
-    # 但最簡單可靠的是：直接在 iframe 裡操控 window.parent.document
-    # Streamlit Cloud 同源，所以可以存取 parent DOM。
-    return f"""<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8">
-<style>
-html, body {{ margin:0; padding:0; overflow:hidden; background:transparent; }}
-</style>
-</head>
-<body>
+    return f"""
 <script>
 (function() {{
+    var DATA = {groups_data};
     var p = window.parent.document;
 
-    // 避免重複注入
-    if (p.getElementById('_memo_style')) {{
-        // 已存在：只更新內容
-        var bodyEl = p.getElementById('memo-body-inner');
-        if (bodyEl) bodyEl.innerHTML = buildInner();
-        return;
-    }}
+    // ── 每次重新注入前先清除舊元素 ──
+    ['memo-fab', 'memo-drawer', 'memo-style'].forEach(function(id) {{
+        var el = p.getElementById(id); if (el) el.remove();
+    }});
 
     // ── 注入 CSS ──
     var style = p.createElement('style');
-    style.id = '_memo_style';
-    style.textContent = `
-        #memo-fab {{
-            position: fixed !important; bottom: 24px !important; right: 24px !important;
-            z-index: 99999 !important; width: 52px; height: 52px; border-radius: 12px;
-            background: #fff; border: 2px solid #222; box-shadow: 3px 3px 0px #111;
-            cursor: pointer; font-size: 22px; display: flex !important;
-            align-items: center; justify-content: center;
-            transition: all 0.15s ease;
-        }}
-        #memo-fab:hover {{ background: #f0f4ff; transform: translate(-1px,-1px); }}
-        #memo-drawer {{
-            position: fixed !important; top: 0 !important; right: 0 !important;
-            width: 360px; height: 100vh; background: #fff;
-            border-left: 2px solid #222; box-shadow: -6px 0 24px rgba(0,0,0,0.18);
-            z-index: 99998 !important; transform: translateX(100%);
-            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
-            display: flex; flex-direction: column; overflow: hidden;
-            font-family: sans-serif;
-        }}
-        #memo-drawer.memo-open {{ transform: translateX(0) !important; }}
-        .memo-header {{
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 14px 16px; border-bottom: 2px solid #222;
-            font-weight: 900; font-size: 1em; background: #f8f9fa; flex-shrink: 0;
-        }}
-        .memo-close {{
-            width: 32px; height: 32px; border: 2px solid #222; border-radius: 6px;
-            background: #fff; cursor: pointer; font-size: 15px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 2px 2px 0 #111; font-weight: 900; padding: 0;
-        }}
-        #memo-body-inner {{ flex:1; overflow-y:auto; padding:12px 14px; background:#fafafa; }}
-        .memo-empty {{ color:#aaa; text-align:center; padding:48px 0; font-size:0.95em; }}
-        .memo-group {{ margin-bottom:12px; border:2px solid #222; border-radius:8px; overflow:hidden; background:#fff; }}
-        .memo-group-header {{
-            display:flex; align-items:center; justify-content:space-between;
-            background:#f0f0f0; padding:8px 12px; font-weight:800; font-size:0.9em;
-            border-bottom:1px solid #ddd;
-        }}
-        .memo-row {{
-            display:flex; align-items:center; justify-content:space-between;
-            padding:8px 12px; border-bottom:1px solid #eee; gap:8px;
-        }}
-        .memo-row:last-child {{ border-bottom:none; }}
-        .memo-match {{ flex:1; color:#333; font-size:0.85em; line-height:1.5; font-family:"SF Mono","Fira Code",monospace; }}
-        .memo-copy-btn {{
-            flex-shrink:0; width:28px; height:28px; border:1.5px solid #bbb;
-            border-radius:5px; background:#f8f9fa; cursor:pointer; font-size:13px;
-            display:inline-flex; align-items:center; justify-content:center; padding:0;
-            box-shadow:1px 1px 0 #ccc; transition:all 0.1s;
-        }}
-        .memo-copy-btn:hover {{ background:#e8f0fe; border-color:#4a90d9; }}
-    `;
+    style.id = 'memo-style';
+    style.textContent = [
+        '#memo-fab {{',
+        '  position:fixed; top:58px; right:18px; z-index:99999;',
+        '  width:44px; height:44px; border-radius:10px;',
+        '  background:#fff; border:2px solid #222; box-shadow:3px 3px 0px #111;',
+        '  cursor:pointer; font-size:20px; display:flex;',
+        '  align-items:center; justify-content:center;',
+        '  transition:all 0.15s ease; padding:0; line-height:1;',
+        '}}',
+        '#memo-fab:hover {{ background:#f0f4ff; transform:translate(-1px,-1px); box-shadow:4px 4px 0px #111; }}',
+        '#memo-drawer {{',
+        '  position:fixed; top:0; right:0; width:360px; height:100vh;',
+        '  background:#fff; border-left:2px solid #222;',
+        '  box-shadow:-6px 0 24px rgba(0,0,0,0.13);',
+        '  z-index:99998; transform:translateX(100%);',
+        '  transition:transform 0.32s cubic-bezier(0.4,0,0.2,1);',
+        '  display:flex; flex-direction:column; overflow:hidden;',
+        '}}',
+        '#memo-drawer.open {{ transform:translateX(0); }}',
+        '.memo-header {{ display:flex; align-items:center; justify-content:space-between;',
+        '  padding:14px 16px; border-bottom:2px solid #222; font-weight:900;',
+        '  font-size:1.0em; background:#f8f9fa; flex-shrink:0; font-family:sans-serif; }}',
+        '.memo-close {{ width:32px; height:32px; border:2px solid #222; border-radius:6px;',
+        '  background:#fff; cursor:pointer; font-size:15px; display:flex;',
+        '  align-items:center; justify-content:center; box-shadow:2px 2px 0px #111;',
+        '  font-weight:900; padding:0; }}',
+        '.memo-close:active {{ box-shadow:0 0 0 #111; transform:translate(2px,2px); }}',
+        '.memo-body {{ flex:1; overflow-y:auto; padding:12px 14px; background:#fafafa; font-family:sans-serif; }}',
+        '.memo-empty {{ color:#aaa; text-align:center; padding:48px 0; font-size:0.95em; }}',
+        '.memo-group {{ margin-bottom:12px; border:2px solid #222; border-radius:8px;',
+        '  overflow:hidden; background:#fff; box-shadow:2px 2px 0px rgba(0,0,0,0.06); }}',
+        '.memo-group-header {{ display:flex; align-items:center; justify-content:space-between;',
+        '  background:#f0f0f0; padding:8px 12px; font-weight:800; font-size:0.9em; border-bottom:1px solid #ddd; }}',
+        '.memo-row {{ display:flex; align-items:center; justify-content:space-between;',
+        '  padding:8px 12px; border-bottom:1px solid #eee; gap:8px; }}',
+        '.memo-row:last-child {{ border-bottom:none; }}',
+        ".memo-match {{ flex:1; color:#333; font-size:0.86em; line-height:1.5; font-family:'SF Mono','Fira Code',monospace; }}",
+        '.memo-copy-btn {{ flex-shrink:0; width:28px; height:28px; border:1.5px solid #bbb;',
+        '  border-radius:5px; background:#f8f9fa; cursor:pointer; font-size:13px;',
+        '  display:inline-flex; align-items:center; justify-content:center;',
+        '  transition:all 0.1s ease; padding:0; }}',
+        '.memo-copy-btn:hover {{ background:#e8f0fe; border-color:#4a90d9; }}',
+        '.memo-copy-btn:active {{ transform:scale(0.92); }}'
+    ].join(' ');
     p.head.appendChild(style);
 
-    // ── 複製函數（注入到 parent window）──
-    if (!window.parent._memoCopy) {{
-        window.parent._execCopy = function(text, cb) {{
-            var ta = p.createElement('textarea');
-            ta.value = text;
-            ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none;';
-            p.body.appendChild(ta);
-            ta.focus(); ta.select();
-            try {{ p.execCommand('copy'); if(cb) cb(); }} catch(e) {{}}
-            p.body.removeChild(ta);
-        }};
-        window.parent._memoCopy = function(text, btnEl) {{
-            var prev = btnEl.textContent;
-            function ok() {{
-                btnEl.textContent = '✅';
-                btnEl.style.background = '#22c55e';
-                btnEl.style.borderColor = '#22c55e';
-                btnEl.style.color = '#fff';
-                setTimeout(function() {{
-                    btnEl.textContent = prev;
-                    btnEl.style.cssText = '';
-                }}, 2000);
-            }}
-            if (navigator.clipboard && navigator.clipboard.writeText) {{
-                navigator.clipboard.writeText(text).then(ok).catch(function(){{ window.parent._execCopy(text, ok); }});
-            }} else {{
-                window.parent._execCopy(text, ok);
-            }}
-        }};
-    }}
-
-    function buildInner() {{
-        var groups = {memo_data_json};
-        if (!groups || groups.length === 0) {{
-            return "<div class='memo-empty'>📭 目前無即將開始的比賽</div>";
-        }}
-        var html = '';
-        groups.forEach(function(g) {{
-            var groupCopy = g.groupCopy;
-            var rowsHtml = g.matches.map(function(m) {{
-                return "<div class='memo-row'>" +
-                    "<span class='memo-match'>" + m.text + "</span>" +
-                    "<button class='memo-copy-btn' onclick=\"window.parent._memoCopy(" + JSON.stringify(m.copy) + ", this)\">📋</button>" +
-                    "</div>";
-            }}).join('');
-            html += "<div class='memo-group'>" +
-                "<div class='memo-group-header'>" +
-                    "<span>" + g.icon + " " + g.league + "</span>" +
-                    "<button class='memo-copy-btn' onclick=\"window.parent._memoCopy(" + JSON.stringify(groupCopy) + ", this)\">📋</button>" +
-                "</div>" +
-                "<div>" + rowsHtml + "</div>" +
-                "</div>";
+    // ── 建立抽屜 HTML ──
+    var bodyHtml = '';
+    if (DATA.length === 0) {{
+        bodyHtml = '<div class="memo-empty">📭 目前無即將開始的比賽</div>';
+    }} else {{
+        DATA.forEach(function(group, gi) {{
+            var rowsHtml = '';
+            group.games.forEach(function(line, ri) {{
+                var rid = 'mrow_' + gi + '_' + ri;
+                rowsHtml += '<div class="memo-row">' +
+                    '<span class="memo-match">' + line + '</span>' +
+                    '<button class="memo-copy-btn" id="' + rid + '" ' +
+                    'onclick="window._memoClip(' + JSON.stringify(line) + ',\'' + rid + '\')">' +
+                    '📋</button></div>';
+            }});
+            var allText = group.games.join('\\n');
+            var gid = 'mgrp_' + gi;
+            bodyHtml += '<div class="memo-group">' +
+                '<div class="memo-group-header">' +
+                '<span>' + group.icon + ' ' + group.league + '</span>' +
+                '<button class="memo-copy-btn" id="' + gid + '" ' +
+                'onclick="window._memoClip(' + JSON.stringify(allText) + ',\'' + gid + '\')">' +
+                '📋</button></div>' +
+                '<div class="memo-group-body">' + rowsHtml + '</div>' +
+                '</div>';
         }});
-        return html;
     }}
 
-    // ── 建立 FAB 按鈕 ──
+    // ── 注入浮動按鈕 ──
     var fab = p.createElement('button');
     fab.id = 'memo-fab';
-    fab.title = '即將開始備忘錄';
-    fab.textContent = '📝';
-    fab.onclick = function() {{
-        p.getElementById('memo-drawer').classList.toggle('memo-open');
-    }};
+    fab.title = '開啟即將開始備忘錄';
+    fab.innerHTML = '📝';
+    fab.onclick = function() {{ p.getElementById('memo-drawer').classList.toggle('open'); }};
     p.body.appendChild(fab);
 
-    // ── 建立抽屜 ──
+    // ── 注入抽屜 ──
     var drawer = p.createElement('div');
     drawer.id = 'memo-drawer';
     drawer.innerHTML =
-        "<div class='memo-header'>" +
-            "<span>📋 即將開始備忘錄</span>" +
-            "<button class='memo-close' id='memo-close-btn'>✕</button>" +
-        "</div>" +
-        "<div id='memo-body-inner'></div>";
+        '<div class="memo-header">' +
+        '<span>📋 即將開始備忘錄</span>' +
+        '<button class="memo-close" onclick="window.parent.document.getElementById(\'memo-drawer\').classList.remove(\'open\')">✕</button>' +
+        '</div>' +
+        '<div class="memo-body">' + bodyHtml + '</div>';
     p.body.appendChild(drawer);
 
-    p.getElementById('memo-close-btn').onclick = function() {{
-        p.getElementById('memo-drawer').classList.remove('memo-open');
+    // ── 複製函式掛在父頁面 window ──
+    window.parent._memoClip = function(text, btnId) {{
+        navigator.clipboard.writeText(text).then(function() {{
+            var b = p.getElementById(btnId);
+            if (!b) return;
+            var prev = b.textContent;
+            b.textContent = '✅';
+            b.style.background = '#22c55e';
+            b.style.borderColor = '#22c55e';
+            b.style.color = '#fff';
+            setTimeout(function() {{
+                b.textContent = prev;
+                b.style.background = '';
+                b.style.borderColor = '';
+                b.style.color = '';
+            }}, 2000);
+        }});
     }};
-
-    p.getElementById('memo-body-inner').innerHTML = buildInner();
 }})();
 </script>
-</body>
-</html>"""
+"""
 
 
 def get_table_html(title, data_list):
@@ -317,41 +209,26 @@ def get_table_html(title, data_list):
     btn_id = "cpbtn_" + _re.sub(r'[^a-zA-Z0-9]', '_', title)
 
     if pre_rows:
-        copy_btn = f'<button id="{btn_id}" class="copy-btn" onclick="_cp(this,{copy_text_json})">&#128203;</button>'
-        copy_script = f"""<script>
-function _cp(btn, text) {{
-    var prev = btn.innerHTML;
-    function ok() {{
-        btn.innerHTML = '&#9989;';
-        btn.style.background = '#22c55e';
-        btn.style.color = '#fff';
-        setTimeout(function() {{
-            btn.innerHTML = prev;
-            btn.style.background = '';
-            btn.style.color = '';
-        }}, 2000);
-    }}
-    if (navigator.clipboard && navigator.clipboard.writeText) {{
-        navigator.clipboard.writeText(text).then(ok).catch(function() {{ _ec(text, ok); }});
-    }} else {{ _ec(text, ok); }}
-}}
-function _ec(text, cb) {{
-    var ta = document.createElement('textarea');
-    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
-    document.body.appendChild(ta); ta.focus(); ta.select();
-    try {{ document.execCommand('copy'); if(cb) cb(); }} catch(e) {{}}
-    document.body.removeChild(ta);
-}}
-</script>"""
+        copy_btn = f'<button id="{btn_id}" class="copy-btn">📋</button>'
+        copy_script = f"""
+        <script>
+        document.getElementById('{btn_id}').onclick = function() {{
+            var text = {copy_text_json};
+            navigator.clipboard.writeText(text).then(function() {{
+                var b = document.getElementById('{btn_id}');
+                b.textContent = '✅'; b.style.background = '#22c55e'; b.style.color = '#fff';
+                setTimeout(function() {{
+                    b.textContent = '📋'; b.style.background = '#f8f9fa'; b.style.color = '#333';
+                }}, 2000);
+            }});
+        }};
+        </script>"""
     else:
         copy_btn = ''
         copy_script = ''
 
     if not data_list:
-        body = f"""
-        <div class="tab-label">{title}</div>
-        <div class="card-empty">📡 該日期暫無賽事數據，鏈路待命。</div>
-        """
+        body = f'<div class="tab-label">{title}</div><div class="card-empty">📡 該日期暫無賽事數據，鏈路待命。</div>'
         est_height = 120
     else:
         rows_html = ""
@@ -374,7 +251,6 @@ function _ec(text, cb) {{
             away_name = row['Away'] + (serve_dot if serving == 'away' else '')
             home_name = row['Home'] + (serve_dot if serving == 'home' else '')
             match_text = f"{away_name} {vs_span} {home_name}"
-
             match_url = row.get('URL', '')
             if match_url:
                 match_cell = f'<a href="{match_url}" target="_blank" rel="noopener" class="match-link">{match_text}</a>'
@@ -393,19 +269,13 @@ function _ec(text, cb) {{
         num_cats  = len(set(r['League'] for r in data_list))
         est_height = 60 + 44 + (num_cats * 38) + (num_games * 56) + 24
         body = f"""
-        <div class="tab-row">
-            <div class="tab-label">{title}{copy_btn}</div>
-        </div>
+        <div class="tab-row"><div class="tab-label">{title}{copy_btn}</div></div>
         <div class="card">
             <table>
-                <thead>
-                    <tr>
-                        <th class='col-time'>時間</th>
-                        <th class='col-status'>狀態</th>
-                        <th class='col-match'>對戰組合</th>
-                        <th class='col-score'>比分</th>
-                    </tr>
-                </thead>
+                <thead><tr>
+                    <th class='col-time'>時間</th><th class='col-status'>狀態</th>
+                    <th class='col-match'>對戰組合</th><th class='col-score'>比分</th>
+                </tr></thead>
                 <tbody>{rows_html}</tbody>
             </table>
         </div>"""
@@ -425,7 +295,6 @@ if (window.ResizeObserver) { new ResizeObserver(_reportH).observe(document.body)
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{ font-family: sans-serif; background: transparent; padding: 4px 2px 8px 2px; }}
-
         .tab-row {{ display: flex; align-items: flex-end; }}
         .tab-label {{
             display: inline-flex; align-items: center;
