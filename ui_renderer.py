@@ -26,7 +26,7 @@ def setup_cyber_css():
             }
 
             @keyframes fadeIn {
-                from { opacity: 0.1; }
+                from { opacity: 1; }
                 to   { opacity: 1; }
             }            
             
