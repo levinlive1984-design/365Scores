@@ -18,7 +18,7 @@ def setup_cyber_css():
             [data-testid="stSidebar"] > div:first-child { padding: 1rem 0.7rem 1rem 0.7rem !important; }
             [data-testid="stSidebar"] h2 { font-size: 0.95em !important; margin-bottom: 0.3rem !important; }
             [data-testid="stSidebar"] h3 { font-size: 0.8em !important; margin-bottom: 0.2rem !important; color: #888 !important; letter-spacing: 0.05em !important; }
-            [data-testid="stSidebar"] .stToggle label { font-size: 0.82em !important; }
+            [data-testid="stSidebar"] .stToggle label { font-size: 0.75em !important; }
             [data-testid="stSidebar"] .stToggle { margin-bottom: 0 !important; padding-bottom: 0 !important; }
             [data-testid="stSidebar"] .stDateInput label { font-size: 0.78em !important; margin-bottom: 0 !important; }
             [data-testid="stSidebar"] .stDateInput input { font-size: 0.82em !important; padding: 4px 8px !important; }
