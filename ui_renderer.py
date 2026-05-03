@@ -77,7 +77,7 @@ def get_memo_html(league_data):
 
     groups_json = []
     for league, rows in league_data.items():
-        pre_rows = [r for r in rows if r.get('State') == 'pre']
+        pre_rows = [r for r in (rows or []) if ...]
         if pre_rows:
             icon = LEAGUE_ICONS.get(league, '🏟️')
             games = [f"{r.get('Date','')} {r['Time']} {r['Away']} vs {r['Home']}" for r in pre_rows]
