@@ -107,6 +107,9 @@ if active_leagues:
         unsafe_allow_html=True
     )
 
+    # None → [] 防禦：API 失敗時回傳 None，統一換成空 list
+    league_data = {k: (v if v is not None else []) for k, v in league_data.items()}
+
     # ── 備忘錄浮動抽屜：inject 到主頁面 DOM（固定懸浮，不隨捲軸移動）──
     components.html(get_memo_html(league_data), height=1, scrolling=False)
 
